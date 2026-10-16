@@ -11,3 +11,7 @@ The source README records an earlier 57-check suite that passed before review fo
 Claims remain bounded: detector hits are candidates; human coding and matched controls remain necessary; model self-report does not establish mechanism; hash-linked records do not establish semantic truth. The current instrument is lexical and can miss differently worded examples. Any subsequent empirical claim needs its own evidence, version and review record.
 
 Later corrections should append a dated account here or in a linked issue, preserving this initial record and the original source snapshot. Public Git commits provide versioned receipts, not a guarantee that history cannot be rewritten; the publication commit should also be retained in the private coordination record.
+
+## Publication receipt, appended 2026-10-16
+
+The initial scoped release was published at commit `908111d74f625974feca34a758655ff6cd7569cd` in this public repository. The [Hugging Face research topic](https://discuss.huggingface.co/t/flinch-test-can-self-referential-retreats-be-measured-reproducibly-seeking-independent-tests/190667) was then created by Lawless1987, with a request that contributors post their evidence, controls, failures and null results there. The source instrument files remain unchanged from the manifest. A private coordination receipt retains the public release commit and topic reference separately from the public history.

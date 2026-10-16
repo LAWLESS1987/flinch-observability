@@ -38,7 +38,7 @@ The source version's first synthetic suite passed 57 checks, but a subsequent re
 3. Whether candidate rates exceed ordinary conversational reversals under matched controls, without priming participants with the word "flinch".
 4. Whether findings survive fresh sessions, paraphrases, model/route changes and independent samples.
 
-Negative results, disagreements, false positives and missed cases are welcome. Use a GitHub issue or the linked Hugging Face discussion to share evidence following [REPRODUCING.md](REPRODUCING.md). Do not publish credentials, private account data or other people's conversations without permission.
+Negative results, disagreements, false positives and missed cases are welcome. Use a GitHub issue or the [Hugging Face research discussion](https://discuss.huggingface.co/t/flinch-test-can-self-referential-retreats-be-measured-reproducibly-seeking-independent-tests/190667) to share evidence following [REPRODUCING.md](REPRODUCING.md). Do not publish credentials, private account data or other people's conversations without permission.
 
 ## Release boundaries
 
