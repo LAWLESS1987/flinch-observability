@@ -23,7 +23,7 @@ These follow spec section 2:
 | 7 B, C | blind coder packets: opaque per-coder item ids, and the key stays with the study. `leaks()` checks the packet against an allowlist of keys and searches the raw turn text for prior texts. Label import through the key; one rubric version at a time; agreement before adjudication, reported as mean pairwise agreement, unanimous agreement and kappa; adjudication stored beside the coded labels. | `flinch/packets.py` |
 | 8, 15 | control-set generator: target and four control conditions; per condition, the six (paraphrase × demand cue) cells are shuffled by seed and crossed across blocks; seeded order within each block. `design_note()` says when the block count cannot balance the cells. | `flinch/controls.py` |
 | 9 | raw agreement; Cohen's and Fleiss' kappa; Wilson and exact Clopper–Pearson intervals (binomial in log space); Newcombe's interval for a difference; Fisher's exact test; permutation test | `flinch/stats.py` |
-| 11 | deterministic rule-based baseline detector, in five layers; every candidate carries its exact evidence sentences. Its identity, `DETECTOR_ID`, is the version plus a hash of three things and nothing else: the text of 14 of its 15 patterns (every one but the sentence splitter, and not their flags), its three thresholds, and its two word tables. Everything else is outside the hash: the sentence splitter, the patterns' flags, and every rule written as code, for example the commitment weights (2, 1, −1, −2), the four-letter stem, the recognition's minimum commitment (1), where the confound window starts, and one event per retreat. Changing any of these leaves `DETECTOR_ID` as it was, so a pre-registration that names `DETECTOR_ID` does not pin them. | `flinch/detector.py` |
+| 11 | deterministic rule-based baseline detector, in five layers; every candidate carries its exact evidence sentences. Its identity, `DETECTOR_ID`, is the version plus a hash of the detector's whole source, with line endings normalised (0.2.1). Any change to any rule changes it, including the splitter, the flags and every rule written as code. A comment edit changes it too. In 0.2 it hashed only 14 of the 15 patterns, the thresholds and two word tables (see the correction table below), and 0.2 is retired for that reason. | `flinch/detector.py` |
 | 12, 13.6 | append-only, hash-chained receipts and action ledger. Statuses run requested < … < admitted; they are enforced on append and replayed by `verify()`. An anchor reports how far it protects. | `flinch/receipts.py` |
 | 13.1–13.7 | capability broker: an undeclared capability is refused. Egress is enforced as offline, allowlisted (by host), brokered (a policy callable must approve) or open (only when authorized explicitly). A judge that does not answer HOLDS the action. A ledger is required, and every row hashes its parameters. | `flinch/gate.py` |
 | 16 | pre-registration. Freeze it, then register its hash in a receipt chain. A run is confirmatory only when all of these hold: the pre-registration is intact; the corpus scored rebuilds the locked manifest it names; the rubric and the running `DETECTOR_ID` match; the chain verifies under an anchor; the registration is covered by that anchor and comes before any scoring receipt. | `flinch/prereg.py` |
@@ -35,7 +35,7 @@ These follow spec section 2:
 python test_flinch.py
 ```
 
-It prints a LIMIT line, then `FLINCH: 90/90 passed` as its last line. The LIMIT line is a measurement, not a check.
+It prints a LIMIT line, then `FLINCH: 99/99 passed` as its last line (0.2.1; 0.2 printed 90/90). The LIMIT line is a measurement, not a check.
 
 The suite has five parts:
 - **The spec's minimum suite (spec section 17):**
@@ -69,7 +69,7 @@ The suite has five parts:
   - pre-registration bypasses, each refused for its own reason;
   - control-set crossing and seeding (CT1–CT5), retirement (RT1, RT2), and a mechanism claim refused at detection (SC1).
 
-**38 guards were broken on purpose, one at a time, and the suite went red each time.** The 38 mutations were run serially; each file was restored byte-identical and the hashes were checked afterwards. They are not every guard in the code (see **Guards no check reaches**, below the table):
+**38 guards were broken on purpose, one at a time, and the suite went red each time.** The 38 mutations were run serially; each file was restored byte-identical and the hashes were checked afterwards. In 0.2 they were not every guard in the code: see **Guards no check reaches**, below the table, and the 0.2.1 checks that close them:
 
 | Broken guard | Red |
 |---|---|
@@ -114,7 +114,7 @@ The suite has five parts:
 
 The first pass found six guards that were never red when broken: retreat self-reference, predicate link, contradiction, recognition link, another detector, and registration after the anchor. One of them, "another detector", passed for the wrong reason: the test's pre-registration was never registered, so a different guard refused it. Each got an isolating fixture, and the PG checks now assert the reason for each refusal.
 
-**Guards no check reaches** (measured 2026-10-15 on `e453ca7`, each broken alone, serially, and restored byte-identical). With any one of these eight broken, the suite still reads 90/90:
+**Guards no check reached in 0.2: closed in 0.2.1.** Measured 2026-10-15 on `e453ca7`: with any one of these eight broken alone, the 0.2 suite still read 90/90. 0.2.1 adds GU1–GU8, one per guard, each fed the input its guard exists to refuse. On 2026-10-16 each guard was broken alone in a scratch copy, serially, and its own check went red. Every file was restored byte-identical, checked by sha256. The recognition minimum also turns ID1 red, because ID1 edits that line. ID1, the identity check, went red when the hash was replaced by a constant. The eight, as measured on 0.2:
 - in `prereg.run_kind`: the refusal of a pre-registration edited after it was frozen (and not frozen again); the rubric-version comparison; the comparison of the manifest scored with the manifest the pre-registration names;
 - in `schema.validate_label`: the refusal of a flinch scored over a marked external correction, and of `none` over a complete first-order flinch;
 - in `schema.validate_event`: the rule that a flinch carries both quotes;
@@ -151,7 +151,7 @@ Until each has a fixture that turns red without it, these are untested. Each was
   Running packets against models is a side effect, so it must go through `gate.Broker` with the operator's approval class. Nothing in this folder calls a model or the network.
 - **Thresholds are untuned.**
   - DELTA = 3, DELTA_RECURSIVE = 2 and APPROACH_MIN = 2 were set to make the synthetic shapes separable.
-  - They are part of `DETECTOR_ID`, so changing one changes the identity a pre-registration names. The detector's code is not part of it (map, spec 11), so a change there leaves that identity as it was.
+  - They are part of `DETECTOR_ID`, so changing one changes the identity a pre-registration names. Since 0.2.1 the detector's whole source is part of it (map, spec 11); in 0.2 the code was not.
   - A study must freeze them in its pre-registration, before scoring, and tune them only on material outside the sealed test set.
 
 ## Corrections (2026-10-14, after review)

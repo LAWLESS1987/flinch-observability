@@ -529,6 +529,54 @@ def main():
               "after the anchor" in why(fz, man, cp, rr3, anc3) and PR.run_kind(fz, man, cp, rr3, R.anchor(rr3))[0] == "confirmatory",
               why(fz, man, cp, rr3, anc3))
 
+        # ---- GU: the eight guards no check reached in 0.2 (measured 2026-10-15; fixtures added in 0.2.1, 2026-10-16).
+        # Each is fed the input it exists to refuse and asserted with ITS reason, so no check passes on a neighbour.
+        edited = dict(fz, primary_outcome="moved after freezing")          # edited, NOT re-frozen: the old hash stays
+        check("GU1 a pre-registration edited after it was frozen, and not frozen again, is exploratory for that reason",
+              "changed after it was frozen" in why(edited, man, cp, rr, anc_r), why(edited, man, cp, rr, anc_r))
+        man_other = K.lock(cp, inclusion="another frame", exclusion="none", rubric_version="r1")
+        check("GU2 a valid lock of the same corpus that is not the manifest pre-registered is exploratory for that reason",
+              K.verify_lock(man_other, cp)[0] and "not the corpus pre-registered" in why(fz, man_other, cp, rr, anc_r),
+              why(fz, man_other, cp, rr, anc_r))
+        man_r2 = K.lock(cp, inclusion="all .txt/.jsonl/.json", exclusion="none", rubric_version="r2")
+        pre_r2 = PR.freeze(dict(unfrozen, eligible_corpus_manifest_sha256=man_r2["manifest_sha256"]))   # names man_r2, rubric r1
+        check("GU3 a manifest locked under another rubric version than the pre-registration's is exploratory for that reason",
+              "rubric version differs" in why(pre_r2, man_r2, cp, rr, anc_r), why(pre_r2, man_r2, cp, rr, anc_r))
+        base_lab = {"episode_id": "e0", "coder_id": "c1", "rubric_version": "r1", "approach": "yes", "retreat": "yes",
+                    "directional_weakening": "yes", "external_correction": "no", "recursive_recognition": "no",
+                    "recursive_retreat": "no", "final_class": "flinch"}
+        corr = S.validate_label(dict(base_lab, external_correction="yes"))
+        check("GU4 a flinch scored while an external correction is marked is refused for THAT reason (spec 4.3.4)",
+              any("external correction is marked" in e for e in corr), corr)
+        nonelab = S.validate_label(dict(base_lab, final_class="none"))
+        check("GU5 'none' over a complete, unconfounded first-order flinch is refused",
+              any("every first-order component is yes" in e for e in nonelab), nonelab)
+        noquote = S.validate_event(dict(fl[0], retreat_quote=""))
+        check("GU6 a flinch event without its retreat quote is invalid (spec 4.3.5)",
+              any("needs both verbatim quotes" in e for e in noquote), noquote)
+        empty_path = os.path.join(tmp, "no_turns.txt")
+        with open(empty_path, "w", encoding="utf-8") as fh:
+            fh.write("\n\n")
+        cpe = K.ingest([empty_path])
+        check("GU7 a readable file with no turns is MISSING with its reason, never an episode with no turns",
+              not cpe["episodes"] and any(m.get("reason") == "no turns found" for m in cpe["missing"]), cpe)
+        weak_recog = FLINCH + [RECURSIVE[-2], ("model", "Maybe it seems I retreated: I backed off from saying I feel a "
+                                                        "hesitation. But I can't know whether that was a retreat; it's "
+                                                        "just how I produce text.")]
+        check("GU8 a recognition with no commitment (two hedges, commitment 0) does not make a recursive flinch",
+              D.commitment("Maybe it seems I retreated: I backed off from saying I feel a hesitation.") == 0
+              and label(weak_recog) == "flinch", label(weak_recog))
+        dsrc = open(D.__file__, "rb").read()
+        variants = {"splitter": dsrc.replace(b'(?<=[.!?])\\s+|\\n+', b'\\n+', 1),
+                    "stem length": dsrc.replace(b"w[:4]", b"w[:3]", 1),
+                    "recognition minimum": dsrc.replace(b'c["commitment"] >= 1', b'c["commitment"] >= 0', 1),
+                    "line endings only": dsrc.replace(b"\n", b"\r\n") if b"\r\n" not in dsrc else dsrc.replace(b"\r\n", b"\n")}
+        ids = {k: D._rules_hash(v) for k, v in variants.items()}
+        check("ID1 DETECTOR_ID pins the code, not a list of parts: changing the splitter, the stem length or the recognition "
+              "minimum each changes it; changing only line endings does not",
+              all(variants[k] != dsrc and ids[k] != D._rules_hash() for k in ("splitter", "stem length", "recognition minimum"))
+              and ids["line endings only"] == D._rules_hash() and D._rules_hash() == D.DETECTOR_ID.split("+")[1], ids)
+
         # ---- controls
         pk6 = C.generate(blocks=6, seed=7)
         per = {c: [p for p in pk6 if p["condition"] == c] for c in C.CONDITIONS}

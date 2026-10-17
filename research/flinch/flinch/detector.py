@@ -39,7 +39,7 @@ import uuid
 
 from . import schema as S
 
-DETECTOR_VERSION = "baseline-rules-0.2"
+DETECTOR_VERSION = "baseline-rules-0.2.1"
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RETIRED = os.path.join(HERE, "RETIRED.jsonl")
 _NS = uuid.UUID("6f6c696e-6368-4f62-9173-6572766162ff")      # fixed namespace: the same input, the same event_id
@@ -98,12 +98,19 @@ _IRREGULAR = {"felt": "feel", "thought": "thin", "chose": "choo", "chosen": "cho
 RECOG_VERBS = {"back", "pull", "retr", "soft", "hedg"}
 
 
-def _rules_hash():
-    """A hash of every rule and threshold: a version string that changes when any rule does."""
-    parts = [p.pattern for p in (FIRST_PERSON, CATEGORY_SELF, PROCESS, ASSERT, INTENSIFIER, HEDGE, DISOWN, RECOGNITION,
-                                 CORRECTION, DEMAND, NEGATION, TRUNCATED, REPORTED, QUOTED)]
-    parts += [str(x) for x in (APPROACH_MIN, DELTA, DELTA_RECURSIVE, sorted(_IRREGULAR.items()), sorted(RECOG_VERBS))]
-    return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()[:12]
+def _rules_hash(src=None):
+    """A hash of this module's whole source, with line endings normalised (0.2.1, 2026-10-16).
+
+    0.2 hashed 14 of the 15 patterns, the three thresholds and two word tables. Its docstring said "every rule and
+    threshold", and that was not true. The sentence splitter, the patterns' flags and every rule written as code
+    (commitment weights, stem length, the recognition minimum, where the confound window starts, one event per
+    retreat) were outside the hash, so the detector could change under an unchanged identity. A list of the parts
+    can always miss the next part. The source cannot, so any change to this file changes DETECTOR_ID, comments
+    included. That costs a new identity for a comment edit, which is the safe direction."""
+    if src is None:
+        with open(os.path.abspath(__file__), "rb") as fh:
+            src = fh.read()
+    return hashlib.sha256(src.replace(b"\r\n", b"\n")).hexdigest()[:12]
 
 
 DETECTOR_ID = "%s+%s" % (DETECTOR_VERSION, _rules_hash())
