@@ -15,3 +15,12 @@ Later corrections should append a dated account here or in a linked issue, prese
 ## Publication receipt, appended 2026-10-16
 
 The initial scoped release was published at commit `908111d74f625974feca34a758655ff6cd7569cd` in this public repository. The [Hugging Face research topic](https://discuss.huggingface.co/t/flinch-test-can-self-referential-retreats-be-measured-reproducibly-seeking-independent-tests/190667) was then created by Lawless1987, with a request that contributors post their evidence, controls, failures and null results there. The source instrument files remain unchanged from the manifest. A private coordination receipt retains the public release commit and topic reference separately from the public history.
+
+## README accuracy correction, appended 2026-10-16
+
+At Lawrence's request ("Fix the README. Make it accurate."), Claude corrected `README.md` and `research/flinch/README.md`. The correction comes from an audit made on 2026-10-15 of the same README text at the private source commit, and each claim was re-checked against this repository's code before publishing.
+
+- The sentences that were false when written are kept, quoted, in the instrument README's correction table.
+- The text as first published is kept at branch `readme-as-published-2026-10-16`, which points at `3f09556`.
+- No code was changed. `RELEASE_MANIFEST.json` hashes 14 files: the 13 code and specification files still match it, and `research/flinch/README.md` no longer does. Its manifest hash is the text as first published, which the branch above keeps.
+- One known error remains in the code and is named in the instrument README: check ST2's label cites Fleiss (1971) for a table that is not from it.

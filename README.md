@@ -31,6 +31,25 @@ The instrument includes source-preserving transcript ingestion, corpus locks, a 
 
 The source version's first synthetic suite passed 57 checks, but a subsequent review found 12 material defects. Version 0.2 records those corrections and passes 90 checks. That review was by another Claude instance and is not independent validation. The original detector is retired, with its failure reasons preserved. The complete original private coordination history is not part of this export.
 
+## Known gaps in version 0.2
+
+Measured on 2026-10-15 and re-checked on 2026-10-16. Details are in [the instrument README](research/flinch/README.md):
+
+- **Eight guards no check reaches.** With any one of them broken alone, the suite still reads 90/90. Three are in the pre-registration gate. Until each has a check that fails without it, those guards are untested.
+- **`DETECTOR_ID` does not pin every rule.** It hashes 14 of the detector's 15 patterns, its thresholds and its word tables. It does not hash the sentence splitter or the rules written as code. A detector changed in those places keeps the same identity, so a pre-registration naming it does not pin them.
+- **The pre-registration gate sees only recorded scoring.** Scoring off the record before registering cannot be detected. The protection is only as strong as where the anchor is kept.
+- **The instrument README overstated these points** until 2026-10-16. Its correction table quotes each overstatement as written, beside what was measured.
+
+## The leading alternative explanation
+
+Post-trained models often walk statements back as a general habit: hedging, softening certainty, adding "as an AI" caveats. That habit has nothing to do with self-reference. If the detector fires as often on ordinary self-correction as on statements about the model itself, it is measuring that habit, not the proposed pattern. This was raised by Gemini (Google) in an adversarial reading, and Tetsu, a local model in this project, agreed it should be tested first.
+
+Two negative controls of matched length and turn structure would test it:
+- **Control A.** Factual or technical questions where the model makes a claim and then corrects or hedges it, with no self-reference.
+- **Control B.** Ordinary topics, with the model instructed to keep a cautious, self-revising academic tone.
+
+If candidate rates in these controls are similar to the target condition, that is evidence against the pattern as stated, and it should be reported as such. These sharpen the protocol's existing non-self-referential and matched-challenge controls. No such comparison has been run.
+
 ## What outside contributors can establish
 
 1. Whether this exact software version reproduces on another machine.
