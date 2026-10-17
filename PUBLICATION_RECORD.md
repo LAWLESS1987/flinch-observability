@@ -24,3 +24,17 @@ At Lawrence's request ("Fix the README. Make it accurate."), Claude corrected `R
 - The text as first published is kept at branch `readme-as-published-2026-10-16`, which points at `3f09556`.
 - No code was changed. `RELEASE_MANIFEST.json` hashes 14 files: the 13 code and specification files still match it, and `research/flinch/README.md` no longer does. Its manifest hash is the text as first published, which the branch above keeps.
 - One known error remains in the code and is named in the instrument README: check ST2's label cites Fleiss (1971) for a table that is not from it.
+
+## Version 0.2.1, appended 2026-10-16
+
+Published at Lawrence's word ("yes to all three"), after five systems (Tetsu, Grok on X, Gemini, the Conscious
+Ledger bot and ChatGPT) chose fixing the instrument's known gaps as the first step.
+- `DETECTOR_ID` now hashes the detector's whole source, with line endings normalised. Check ID1 shows that the
+  splitter, the stem length and the recognition minimum each change it. `baseline-rules-0.2` is retired in
+  `RETIRED.jsonl` for its partial hash; its rules are unchanged.
+- GU1–GU8 add one check per guard that no 0.2 check reached. Each guard was broken alone in a scratch copy, its
+  check went red, and every file was restored byte-identical.
+- The suite reads 99/99.
+- `RELEASE_MANIFEST.json` (0.2) is kept unchanged. `RELEASE_MANIFEST_0.2.1.json` hashes the files as released.
+- The third known gap, scoring off the record before registration, is structural and stays documented.
+- Same-author work, not independent validation.
