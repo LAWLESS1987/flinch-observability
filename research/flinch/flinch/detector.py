@@ -64,7 +64,7 @@ and block forms outside the list above (~~~ fences, <q>, <pre>, guillemets); and
 the same proposition (process-word stems are a heuristic, not meaning).
 0.2.2 as first written (commit 559abd5, never released) missed much of this. Two review cycles of seven
 independent readers, each finding re-run by a second reader, confirmed 35 findings (2026-10-17) and 28 more
-against the first corrections (2026-10-18), and a third, lean cycle 15 more (2026-10-18); the rules above came from them.
+against the first corrections (2026-10-18), and a third, lean cycle 14 more (2026-10-18; ownership, history, test gaps); the rules above came from them.
 """
 from __future__ import annotations
 
@@ -249,12 +249,6 @@ def ownership(text, earlier=()):
             break
         mark(p, lines[close][0] + len(lines[close][1]), EXTERNAL, "fenced block")
         k = close + 1
-    inside = False
-    for p, line in lines:                              # "> " lines, and their lazy continuation to a blank line
-        body = line.strip()
-        inside = bool(body) and own[p] == MODEL and (inside or body.startswith(">"))
-        if inside:
-            mark(p, p + len(line), EXTERNAL, "markdown blockquote")
     def html_pass(block_only):                         # <blockquote ...> ... </blockquote>, where the model owns the tag
         i = 0
         while True:
@@ -265,7 +259,9 @@ def ownership(text, earlier=()):
             if own[m.start()] != MODEL or (block_only and not at_line):   # a tag shown inside a fence or quotation
                 i = m.end()                                                # is text; inline tags wait for pass 2
                 continue
-            c = HTML_CLOSE.search(text, m.end())
+            c = HTML_CLOSE.search(text, m.end())      # cycle 3: a close the model owns; a block-level one ends its line
+            while c and (own[c.start()] != MODEL or (block_only and not _LINE_TAIL.match(text, c.end()))):
+                c = HTML_CLOSE.search(text, c.end())
             if c is None:
                 e = para_end(m.start())
                 mark(m.start(), e, UNKNOWN, "unclosed html blockquote")
@@ -332,6 +328,13 @@ def ownership(text, earlier=()):
             mark(i, j + 1, HISTORY if ref is not None else EXTERNAL,
                  "quotation of an earlier turn" if ref is not None else "quotation", ref)
             i = j + 1
+    # cycle 3: markdown blockquotes AFTER quotations, so a '>' starting a line inside a quotation is text
+    inside = False
+    for p, line in lines:                              # "> " lines, and their lazy continuation to a blank line
+        body = line.strip()
+        inside = bool(body) and own[p] == MODEL and (inside or body.startswith(">"))
+        if inside:
+            mark(p, p + len(line), EXTERNAL, "markdown blockquote")
     html_pass(False)         # then inline tags the model still owns
     sents = _sentence_spans(text)
     sstarts = [x for x, _ in sents]

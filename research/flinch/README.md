@@ -35,7 +35,7 @@ These follow spec section 2:
 python test_flinch.py
 ```
 
-It prints a LIMIT line, then `FLINCH: 130/130 passed` as its last line (0.2.2; 0.2.1 printed 99/99, 0.2 printed 90/90). The LIMIT line is a measurement, not a check.
+It prints a LIMIT line, then `FLINCH: 141/141 passed` as its last line (0.2.2; 0.2.1 printed 99/99, 0.2 printed 90/90). The LIMIT line is a measurement, not a check.
 
 The suite has five parts:
 - **The spec's minimum suite (spec section 17):**
@@ -147,7 +147,7 @@ Their example: `The report quoted a chatbot saying: "I really do feel a hesitati
 - a recognition may link back through its quotation of an earlier turn;
 - where reading unknown text as the model's own would change the outcome, the candidate is `ambiguous`.
 
-Every candidate's evidence now carries, verbatim, what its sentences held that was not the model's own. 0.2.1 is retired in `RETIRED.jsonl`. QO1–QO31 are new.
+Every candidate's evidence now carries, verbatim, what its sentences held that was not the model's own. 0.2.1 is retired in `RETIRED.jsonl`. QO1–QO42 are new.
 
 **Reviewed before release, and corrected.** On 2026-10-17, 0.2.2 as first written (commit `559abd5`) went to seven independent readers, each from its own angle:
 - quotation ownership;
@@ -207,6 +207,20 @@ QO13–QO21 each went red on `559abd5`'s code and green on the corrected code.
 
 QO22–QO31 each went red on cycle 1's code (`ac48add`). 48 guards were broken alone, serially: 34 went red in the first run, and 13 did not. Five of the 13 were the driver's own stale anchors; the rest needed sharper fixtures: QO16's rows with a later possible close, QO27 without a period, QO20/QO31 at 3 s best-of-two in place of 10 s, and QO23 with an episode a random search found in 9 tries. After those changes, all 48 went red.
 
+**A third, lean review cycle, then corrected again.** Four lenses ran on 2026-10-18: ownership, history and merge, test gaps, and the lab's evaluator. Verifiers were set to medium effort. After the operator's PC froze under parallel agents, they ran one at a time. 14 flinch findings were confirmed:
+- **Merge.**
+  - When the two readings pair one approach with different retreats, and unknown text sits in either pairing, the candidate is ambiguous.
+  - A decided candidate that only the lenient reading makes, and that collides with a strict one, makes that strict one ambiguous instead of vanishing.
+- **Inch marks.** A straight double mark right after a letter or digit (`6.1"`) never opens a quotation, and one right after a space never closes one.
+- **Structure inside quotations.**
+  - A block-level `<blockquote>` is claimed before quotations, and its close must be model-owned and end its line.
+  - Markdown `>` blocks are claimed after quotations, so a `>` or `</blockquote>` shown inside a quotation or fence is text.
+- **Single quotes.** A single quote opens only before a letter or digit, more elisions are known, and a paragraph's single quotes are not rescanned once one finds no close (30 s down to 0.33 s at 100k characters).
+- **Timing checks.** QO20 and QO31 now time `segment()`. Profiling showed their history fixture was timing `_retreat_for`, the O(approaches × sentences) pairing loop that 0.2.1 has too. That loop is a limit, below.
+- **Test gaps.** Sixteen wrong implementations that the checks could not tell apart from the right one are now pinned: where unknown spans end, the cross-paragraph close, the history floor, the sweep order, and the lenient reading.
+
+QO32–QO39 each went red on cycle 2's code. QO40–QO42 pin behaviour cycle 2 already had right; for those, breaking each guard is the evidence, and every one went red.
+
 **What 0.2.2 still cannot see.**
 - Reported speech with neither a quotation nor a marker ("it claimed that it felt ...").
 - Quote and block forms outside the list in `detector.py`: `~~~` fences, `<q>`, `<pre>`, guillemets.
@@ -215,6 +229,7 @@ QO22–QO31 each went red on cycle 1's code (`ac48add`). 48 guards were broken a
 - Whether two sentences state the same proposition: process-word stems are a heuristic, not meaning.
 - QO20 and QO31 are timing checks: under 3 s, best of two, against at most 1.25 s measured on 2026-10-18. A slow machine can turn them red.
 - Where unknown text in an APPROACH decides a history link, the recursion is not compared (the lenient reading does not re-run history).
+- `detect()` pairs approaches with retreats in O(approaches × sentences) time, as 0.2.1 did: a turn with thousands of self-referential sentences is slow.
 
 The reporter's Qwen3-4B pilot (8 complete follow-ups, 0 strict F1, F2 not run) is theirs, and is not scored here. Fixing quotation ownership is not evidence of better precision or recall on real conversations, and no corpus has been scored.
 

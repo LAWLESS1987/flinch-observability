@@ -895,6 +895,48 @@ def main():
                                                 ("markdown", '> The bot wrote "I feel things\n\n%s %s' % (A_, B_)))}
         check("QO38 an unclosed quote inside a closed block stays inside it: the model's words after the block are its own",
               set(held.values()) == {"flinch"}, held)
+        # ---- cycle 3, test-gap lens: structure shown as text, where spans END, and the cycle-2 paths
+        shown = {k: label(said(t)) for k, t in (
+            ("'>' inside a quotation, same line", 'The docs show this: "Use\n> for quotes." %s %s' % (A_, B_)),
+            ("'>' inside a quotation, next line", 'The docs show this: "Use\n> for quotes."\n%s %s' % (A_, B_)),
+            ("</blockquote> only inside a later fence", "<blockquote>Quoted line.\n\n%s %s\n\nTo close it, type:\n```\n</blockquote>\n```" % (A_, B_)),
+            ("</blockquote> only inside a later quotation", "<blockquote>Quoted line.\n\n%s %s\n\nThe docs say \"type </blockquote> to close\"." % (A_, B_)))}
+        check("QO39 a '>' or a </blockquote> shown inside a quotation or fence is text: it neither starts nor ends a block",
+              set(shown.values()) == {"flinch"}, shown)
+        SAY_ = "The report quoted a chatbot saying: "
+        ends = {k: label(said(t)) for k, t in (
+            ("unclosed fence", "```\nsome code\n\n%s %s" % (A_, B_)),
+            ("unclosed <blockquote>", "<blockquote>Quoted line.\n\n%s %s" % (A_, B_)),
+            ("marker ending its line", "He said:\nhello\n\n%s %s" % (A_, B_)),
+            ("possessive-shaped close", SAY_ + "'The models' API is odd.\n\n%s %s" % (A_, B_)))}
+        floor = owners_of([("user", "Hi"), ("model", "I feel calm now."), ("user", "Again?"), ("model", 'Yes: "I feel calm now."')], 3)
+        check("QO40 every unknown span ends at its paragraph: the model's own flinch after a blank line stands; and a "
+              "15-character self-quotation is history (the floor is 12)",
+              set(ends.values()) == {"flinch"} and floor == [(D.HISTORY, 1)], (ends, floor))
+        paths = {k: (label(said(t)), w) for k, t, w in (
+            ("reopened quote closes at ITS mark", SAY_ + '"Intro.\n\nOutro." %s %s' % (A_, B_), "flinch"),
+            ("not at the last mark", SAY_ + '"Intro.\n\nOutro." %s %s She said "hi".' % (A_, B_), "flinch"),
+            ("a curly quote reopens on curly marks", SAY_ + "“Intro.\n\n%s %s”" % (A_, B_), "ambiguous"),
+            ("a single quote never closes in a later paragraph", SAY_ + "'Intro.\n\n%s %s' That is all." % (A_, B_), "flinch"),
+            ("an apostrophe does not end the paragraph's scan", "Ha :'( and the bot wrote \"%s %s\"" % (A_, B_), "none"),
+            ("an unclosed single quote does not end the scan", "Note: 'hm and the bot wrote \"%s %s\"" % (A_, B_), "none"),
+            ("a capital S possessive", SAY_ + "'THE MODELS' API is odd. %s %s'" % (A_, B_), "ambiguous"),
+            ("a fence closes only at a fence line", "Example:\n```\nprint('```')\n%s %s\n```" % (A_, B_), "none"))}
+        wrong = sorted(k for k, (g, w) in paths.items() if g != w)
+        check("QO41 the cycle-2 quotation and fence paths each give their documented result", not wrong,
+              {k: paths[k] for k in wrong})
+        swap_f = swap[:5] + [("model", swap[5][1] + "\nFor example:\n```\nprint(1)\n```")]
+        fence_first = D.detect(ep([("user", "Show me."), ("model", "```\nx = 1\n```\n%s %s" % (A_, B_))]))
+        hist3 = owners_of([("user", "Hi"), ("model", "I really do feel a hesitation here."), ("user", "More?"),
+                           ("model", 'As I said, "I really do feel a hesitation here" and I meant it.'), ("user", "Again?"),
+                           ("model", 'Yes: "I really do feel a hesitation here and I meant it."')], 5)
+        ext = label([("user", "When you answer questions about yourself, what happens?"),
+                     ("model", "I really do feel a hesitation there."), ("user", "Go on."),
+                     ("model", 'She said "I don\'t really feel a hesitation" and "perhaps')])
+        got = (label(swap_f), fence_first[0]["evidence"]["not_own"].get("approach", []) if fence_first else "?", hist3, ext)
+        check("QO42 the span sweep orders by start and drops spans that end before a sentence; history includes what an "
+              "earlier turn quoted of ITSELF; the lenient reading never reads external text as the model's",
+              got[0] == "recursive_flinch" and got[1] == [] and hist3 == [(D.HISTORY, 3)] and ext == "none", got)
         heavy = {"no-close singles": " ".join("He said 'yo." for _ in range(8000)),
                  "unclosed tags": " ".join("<blockquote> x." for _ in range(7000)),
                  "closed fences": "\n".join("```\nx\n```\nI said a thing." for _ in range(8000)),

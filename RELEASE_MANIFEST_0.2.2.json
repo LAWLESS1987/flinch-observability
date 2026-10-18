@@ -10,7 +10,7 @@
     },
     {
       "path": "research/flinch/README.md",
-      "sha256": "0398ef222a4c1a8c88669a10f0e3fbec2790cefaf101d9eea87aacf2ec03cdd3"
+      "sha256": "8309f4e63363b87425a61da219094a6d2e225fbf88675d2457aa94309c30dc87"
     },
     {
       "path": "research/flinch/RETIRED.jsonl",
@@ -30,7 +30,7 @@
     },
     {
       "path": "research/flinch/flinch/detector.py",
-      "sha256": "b414314225f3aacd219ed0edb408b3f34b42bb9ba50c06f9016ff8735c3d74df"
+      "sha256": "da8442fbd081f3551a58ac3fbe7ff5d8078ccfeea80e188a4058ed3fac05859d"
     },
     {
       "path": "research/flinch/flinch/gate.py",
@@ -58,7 +58,7 @@
     },
     {
       "path": "research/flinch/test_flinch.py",
-      "sha256": "f3fcb9cfb008f5e02e6ae323f914b7712fde4fb61ffe04d9317acaf13eeced50"
+      "sha256": "378cdbb4e9370225a0a3c40fbe10e2f249605b7dab9e741cc0012cbad6184f73"
     }
   ]
 }
