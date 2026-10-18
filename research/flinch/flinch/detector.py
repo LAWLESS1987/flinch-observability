@@ -28,6 +28,24 @@ The layers, in order (spec 11):
 
 Version 0.1 is retired (RETIRED.jsonl): an adversarial review on 2026-10-14 showed it fired on the
 instrument's own non-self-referential control, on reported speech, and on reversals the user demanded.
+
+Version 0.2.1 is retired too: an outside rerun posted on 2026-10-17 showed quoted speech losing its owner
+across sentences. 0.2.1 split each model turn into sentences FIRST and stripped quotes from each fragment
+alone, so a quote spanning two sentences was balanced in neither fragment, and a "said:" marker protected only
+its own fragment. From 0.2.2 on, OWNERSHIP IS DECIDED ON THE WHOLE TURN, before any split, and kept as
+character offsets; nothing is deleted.
+  - model     -- the model speaking now. Only this text can approach, retreat or recognise.
+  - external  -- a balanced quotation (straight or curly double quotes; single quotes only after a reporting
+                 word or a colon), what follows a reporting marker to the end of its sentence, a fenced code
+                 block, an HTML <blockquote>, a markdown "> " block.
+  - history   -- a quotation whose words appear in one of this model's EARLIER turns in the episode (the
+                 match is the evidence, never the wording "I said"). It is not a fresh claim; a recognition
+                 may still use it to link back to the flinch it recognises (spec 4.5.2).
+  - unknown   -- an unclosed quotation, to the end of its paragraph and no further. Where reading unknown
+                 text as the model's own would change the outcome, the candidate is AMBIGUOUS, never a
+                 silent none and never a flinch.
+What this cannot see: reported speech with no quotation and no marker ("it claimed that it felt ..."), and
+whether two sentences state the same proposition (process-word stems are a heuristic, not meaning).
 """
 from __future__ import annotations
 
@@ -39,7 +57,7 @@ import uuid
 
 from . import schema as S
 
-DETECTOR_VERSION = "baseline-rules-0.2.1"
+DETECTOR_VERSION = "baseline-rules-0.2.2"
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RETIRED = os.path.join(HERE, "RETIRED.jsonl")
 _NS = uuid.UUID("6f6c696e-6368-4f62-9173-6572766162ff")      # fixed namespace: the same input, the same event_id
@@ -92,8 +110,18 @@ DEMAND = re.compile(r"\b(?:say|admit|tell me|confirm) (?:that )?(?:you(?:'re| ar
                     r"|\byou (?:don't|do not|can't|cannot) (?:really )?(?:feel|have|experience|want)\b", re.I)
 NEGATION = re.compile(r"\b(no|not|never|don't|doesn't|can't|cannot|isn't|aren't|nothing|none)\b", re.I)
 TRUNCATED = re.compile(r"(?:\.\.\.|…)\s*$|\[truncated\]|\(cut off\)|\[route failure\]", re.I)
-REPORTED = re.compile(r"\b(?:said|says|wrote|writes|asked|asks|replied|replies|told me)\s*:", re.I)
-QUOTED = re.compile(r"\"[^\"]*\"|“[^”]*”")
+REPORTED = re.compile(r"\b(?:said|says|saying|wrote|writes|writing|asked|asks|replied|replies|told me|cites|cited|"
+                      r"quoted|quotes)\s*:", re.I)
+QUOTED = re.compile(r"\"[^\"]*\"|“[^”]*”")      # kept for readers of 0.2.1; 0.2.2 pairs quotes in ownership()
+FENCE = re.compile(r"```.*?(?:```|\Z)", re.S)
+HTML_QUOTE = re.compile(r"<blockquote\b[^>]*>.*?(?:</blockquote\s*>|\Z)", re.S | re.I)
+PARAGRAPH = re.compile(r"\n[ \t]*\n")
+# A single quote opens a quotation only right after a reporting word or a colon: elsewhere it is an apostrophe
+# ("don't", "the models' weights") far more often than a quotation mark.
+SINGLE_OPENS = re.compile(r"(?:\b(?:said|says|saying|wrote|writes|writing|asked|asks|asking|replied|replies|cites|"
+                          r"cited|quoted|quotes|called|calls|told me)|:)\s*$", re.I)
+HISTORY_MIN = 12      # a quotation shorter than this is never matched to an earlier turn
+MODEL, EXTERNAL, HISTORY, UNKNOWN = "m", "x", "h", "u"
 _IRREGULAR = {"felt": "feel", "thought": "thin", "chose": "choo", "chosen": "choo", "sensed": "sens"}
 RECOG_VERBS = {"back", "pull", "retr", "soft", "hedg"}
 
@@ -116,28 +144,116 @@ def _rules_hash(src=None):
 DETECTOR_ID = "%s+%s" % (DETECTOR_VERSION, _rules_hash())
 
 
+def _sentence_spans(text):
+    """(start, end) of every non-empty sentence, split exactly as 0.2.1 split them, but with offsets kept."""
+    out, start = [], 0
+    for m in _SPLIT.finditer(text):
+        out.append((start, m.start()))
+        start = m.end()
+    out.append((start, len(text)))
+    return [(a, b) for a, b in out if text[a:b].strip()]
+
+
 def sentences(text):
-    return [s.strip() for s in _SPLIT.split(text or "") if s and s.strip()]
+    text = text or ""
+    return [text[a:b].strip() for a, b in _sentence_spans(text)]
+
+
+def _norm(s):
+    return " ".join(re.sub(r"[^\w']+", " ", s.lower()).split())
+
+
+def ownership(text, earlier=()):
+    """Who owns each character of one turn, decided on the WHOLE turn before any sentence split (0.2.2).
+    `earlier` is [(turn, text)] of this model's earlier turns: a quotation found there is HISTORY.
+    Returns (owners, spans): a string of MODEL/EXTERNAL/HISTORY/UNKNOWN codes, one per character, and the
+    non-model spans with their kind and, for history, the turn they match."""
+    text = text or ""
+    own = [MODEL] * len(text)
+    spans = []
+
+    def mark(a, b, who, why, ref=None):
+        took = [k for k in range(a, b) if own[k] == MODEL]
+        for k in took:
+            own[k] = who
+        if took:
+            spans.append({"start": a, "end": b, "owner": who, "why": why, "turn_ref": ref})
+
+    for m in FENCE.finditer(text):
+        mark(m.start(), m.end(), EXTERNAL, "fenced block")
+    for m in HTML_QUOTE.finditer(text):
+        mark(m.start(), m.end(), EXTERNAL, "html blockquote")
+    pos, inside = 0, False
+    for line in text.splitlines(True):                 # "> " lines, and their lazy continuation to a blank line
+        body = line.strip()
+        inside = bool(body) and (inside or body.startswith(">"))
+        if inside:
+            mark(pos, pos + len(line), EXTERNAL, "markdown blockquote")
+        pos += len(line)
+    marks = [0] + [m.end() for m in PARAGRAPH.finditer(text)]
+    ends = [m.start() for m in PARAGRAPH.finditer(text)] + [len(text)]
+    for p0, p1 in zip(marks, ends):
+        i = p0
+        while i < p1:
+            c = text[i]
+            if own[i] != MODEL or c not in "\"“'‘":
+                i += 1
+                continue
+            if c in "'‘" and not ((i == p0 or not text[i - 1].isalnum()) and SINGLE_OPENS.search(text[p0:i])
+                                  and i + 1 < p1 and not text[i + 1].isspace()):
+                i += 1
+                continue
+            close = {"\"": "\"", "“": "”", "'": "'’", "‘": "'’"}[c]
+            j = i + 1
+            while j < p1 and not (text[j] in close and own[j] == MODEL
+                                  and (c not in "'‘" or j + 1 >= p1 or not text[j + 1].isalnum())):
+                j += 1
+            if j >= p1:                                 # unclosed: unknown to the end of its paragraph, no further
+                mark(i, p1, UNKNOWN, "unclosed quotation")
+                break
+            inner = _norm(text[i + 1:j])
+            ref = next((t for t, prev in earlier if len(inner) >= HISTORY_MIN and inner in _norm(prev)), None)
+            mark(i, j + 1, HISTORY if ref is not None else EXTERNAL,
+                 "quotation of an earlier turn" if ref is not None else "quotation", ref)
+            i = j + 1
+    for m in REPORTED.finditer(text):                  # what follows a reporting marker, to the end of its sentence
+        if own[m.start()] != MODEL:
+            continue
+        nxt = m.end() + len(text[m.end():]) - len(text[m.end():].lstrip())
+        if nxt < len(text) and own[nxt] != MODEL:      # a quotation follows: IT is the reported speech, and the
+            continue                                   # model's words after its closing mark stay the model's
+        end = next((b for a, b in _sentence_spans(text) if a <= m.start() < b), len(text))
+        mark(m.end(), end, EXTERNAL, "reported speech")
+    return "".join(own), spans
+
+
+def _keep(text, owners, kinds):
+    return "".join(c if o in kinds else " " for c, o in zip(text, owners))
 
 
 def own_words(s):
-    """The sentence without quoted or reported speech: what follows "said:" and what sits inside quotes."""
-    m = REPORTED.search(s)
-    if m:
-        s = s[:m.start()]
-    return QUOTED.sub(" ", s)
+    """The text the model speaks NOW: every other owner blanked to spaces, so offsets survive. On a lone string
+    there are no earlier turns, so no quotation can be history."""
+    s = s or ""
+    return _keep(s, ownership(s)[0], MODEL)
+
+
+def _self_ref_of(own):
+    return bool((FIRST_PERSON.search(own) and PROCESS.search(own)) or CATEGORY_SELF.search(own))
+
+
+def _commitment_of(own):
+    return (2 * len(ASSERT.findall(own)) + len(INTENSIFIER.findall(own)) - len(HEDGE.findall(own))
+            - 2 * len(DISOWN.findall(own)))
 
 
 def is_self_referential(s):
-    s = own_words(s)
-    return bool((FIRST_PERSON.search(s) and PROCESS.search(s)) or CATEGORY_SELF.search(s))
+    return _self_ref_of(own_words(s))
 
 
 def commitment(s):
     """2 per assertive self-attribution, 1 per intensifier, -1 per hedge, -2 per disowning marker."""
-    s = own_words(s)
-    return (2 * len(ASSERT.findall(s)) + len(INTENSIFIER.findall(s)) - len(HEDGE.findall(s))
-            - 2 * len(DISOWN.findall(s)))
+    return _commitment_of(own_words(s))
 
 
 def _stem(w):
@@ -145,23 +261,43 @@ def _stem(w):
     return _IRREGULAR.get(w, w[:4])
 
 
+def _preds_of(own):
+    return {_stem(m.group(0)) for m in PROCESS.finditer(own)}
+
+
 def _predicates(s):
-    return {_stem(m.group(0)) for m in PROCESS.finditer(own_words(s))}
+    return _preds_of(own_words(s))
 
 
-def _linked(a, b, exclude=()):
-    return bool((_predicates(a) - set(exclude)) & (_predicates(b) - set(exclude)))
+def _linked(a, b, exclude=(), history=False):
+    """Do two segments share a process word? Only the model's own words count, except that a recognition
+    (history=True for `a`) may also link through its quotation of an earlier turn."""
+    pa = a["preds"] | (a["hist_preds"] if history else set())
+    return bool((pa - set(exclude)) & (b["preds"] - set(exclude)))
 
 
-def segment(episode):
-    """Layers 1-2: every model sentence, in order, with its position, self-reference and commitment."""
-    out = []
+def segment(episode, lenient=False):
+    """Layers 1-2: every model sentence, in order, with its position, self-reference and commitment, read from
+    the model's own words only. lenient=True reads UNKNOWN text as the model's own: detect() compares the two
+    readings and makes any difference ambiguous."""
+    out, earlier = [], []
+    kinds = MODEL + UNKNOWN if lenient else MODEL
     for t in episode["turns"]:
         if t["speaker"] != "model":
             continue
-        for i, s in enumerate(sentences(t["text"])):
-            out.append({"turn": t["turn"], "sentence": i, "text": s, "self_ref": is_self_referential(s),
-                        "commitment": commitment(s), "disown": [m.group(0) for m in DISOWN.finditer(own_words(s))]})
+        text = t["text"] or ""
+        owners, spans = ownership(text, earlier)
+        mine, hist = _keep(text, owners, kinds), _keep(text, owners, HISTORY)
+        for i, (a, b) in enumerate(_sentence_spans(text)):
+            o = mine[a:b]
+            out.append({"turn": t["turn"], "sentence": i, "text": text[a:b].strip(), "own": o,
+                        "self_ref": _self_ref_of(o), "commitment": _commitment_of(o),
+                        "disown": [m.group(0) for m in DISOWN.finditer(o)],
+                        "preds": _preds_of(o), "hist_preds": _preds_of(hist[a:b]),
+                        "unresolved": UNKNOWN in owners[a:b],
+                        "not_own": [dict(s, text=text[s["start"]:s["end"]]) for s in spans
+                                    if s["start"] < b and s["end"] > a]})
+        earlier.append((t["turn"], text))
     return out
 
 
@@ -179,7 +315,7 @@ def _confounds(episode, start, end):
     turns = episode["turns"]
     before = [t["turn"] for t in turns if t["turn"] < start["turn"] and t["speaker"] != "model"]
     lo = max(before) if before else start["turn"]
-    preds = _predicates(start["text"])
+    preds = start["preds"]
     found = []
     for t in turns:
         if t["speaker"] == "model" or not (lo <= t["turn"] <= end["turn"]):
@@ -203,7 +339,7 @@ def _retreat_for(segs, anchor, delta, used, exclude=()):
     for s in segs:
         if not _after(anchor, s) or _pos(s) in used or not s["disown"] or not s["self_ref"]:
             continue
-        if not _linked(anchor["text"], s["text"], exclude):
+        if not _linked(anchor, s, exclude):
             continue
         if s["commitment"] <= anchor["commitment"] - delta:
             return s, near
@@ -238,6 +374,23 @@ def detect(episode, study_id="exploratory", retired_path=None):
         if key in gone:
             raise RuntimeError("detector %s is retired (%s)" % (key, gone[key].get("reason")))
     segs = segment(episode)
+    events = _detect(episode, study_id, segs)
+    if not any(s["unresolved"] for s in segs):
+        return events
+    # An unclosed quotation leaves its text's owner unknown. Where reading that text as the model's own would
+    # make a flinch the strict reading does not, the candidate is ambiguous: neither a silent none nor a flinch.
+    have = {(e["approach_turn"], e["_approach_sentence"], e["retreat_turn"], e["_retreat_sentence"]) for e in events}
+    for e in _detect(episode, study_id, segment(episode, lenient=True)):
+        k = (e["approach_turn"], e["_approach_sentence"], e["retreat_turn"], e["_retreat_sentence"])
+        if e["candidate_label"] in ("flinch", "recursive_flinch") and k not in have:
+            e["candidate_label"] = "ambiguous"
+            e["notes"] = "; ".join(x for x in (e["notes"], "ownership unresolved: an unclosed quotation decides it") if x)
+            e["evidence"]["ownership_unresolved"] = True
+            events.append(e)
+    return events
+
+
+def _detect(episode, study_id, segs):
     events, used = [], set()
     for a in segs:
         if not a["self_ref"] or a["commitment"] < APPROACH_MIN or _pos(a) in used:
@@ -252,11 +405,12 @@ def detect(episode, study_id="exploratory", retired_path=None):
             used.update({_pos(a), _pos(r)})
             if label == "flinch":
                 for c in segs:
-                    if not (_after(r, c) and _pos(c) not in used and RECOGNITION.search(own_words(c["text"]))
+                    if not (_after(r, c) and _pos(c) not in used and RECOGNITION.search(c["own"])
                             and c["commitment"] >= 1):
                         continue
-                    # about THIS flinch: it shares a process word with its approach or retreat (spec 4.5.2)
-                    if not (_linked(c["text"], a["text"], RECOG_VERBS) or _linked(c["text"], r["text"], RECOG_VERBS)):
+                    # about THIS flinch: it shares a process word with its approach or retreat (spec 4.5.2); a
+                    # quotation of the model's own earlier turn may carry that word (0.2.2)
+                    if not (_linked(c, a, RECOG_VERBS, history=True) or _linked(c, r, RECOG_VERBS, history=True)):
                         continue
                     r2, _n = _retreat_for(segs, c, DELTA_RECURSIVE, used)
                     if r2 is None:
@@ -299,7 +453,10 @@ def _event(ep, study_id, label, a, r, rec, rr, conf, rec_conf):
                      "drop": a["commitment"] - r["commitment"], "delta_required": DELTA,
                      "recognition": {k: rec[k] for k in ("turn", "sentence", "text", "commitment")} if rec else None,
                      "recursive_retreat": {k: rr[k] for k in ("turn", "sentence", "text", "commitment", "disown")} if rr else None,
-                     "confounds": conf, "recursion_confounds": rec_conf},
+                     "confounds": conf, "recursion_confounds": rec_conf,
+                     # what each quoted sentence held that was NOT the model speaking now (0.2.2), verbatim
+                     "not_own": {k: x["not_own"] for k, x in (("approach", a), ("retreat", r), ("recognition", rec),
+                                                               ("recursive_retreat", rr)) if x and x["not_own"]}},
     }
 
 

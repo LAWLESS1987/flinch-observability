@@ -1,0 +1,64 @@
+{
+  "instrument_version": "0.2.2",
+  "based_on": "RELEASE_MANIFEST_0.2.1.json (0.2.1, source 987596b), kept unchanged",
+  "line_endings": "sha256 over the file with CRLF normalised to LF, as git stores it",
+  "scope": "flinch instrument and specification only; no private history, transcripts, credentials or coordination records",
+  "files": [
+    {
+      "path": "docs/research/FLINCH_RECURSIVE_OBSERVABILITY_SPEC.md",
+      "sha256": "87edc2c796042688d39b25d626b5ef13f5810aad54c547888d5fa28197e594bc"
+    },
+    {
+      "path": "research/flinch/README.md",
+      "sha256": "986097938eb2bcd071ef845e9b2bda3353c58cc5667218f9f444e517497a026b"
+    },
+    {
+      "path": "research/flinch/RETIRED.jsonl",
+      "sha256": "6b892f117a583e9e7b48ba593da400db413a6e0b75dbb5ff2109a457dfed6c96"
+    },
+    {
+      "path": "research/flinch/flinch/__init__.py",
+      "sha256": "4e2f3d22c5fcaefefb71e3d6d400633f12e37f358ba9bd1ff91ef36c121fb097"
+    },
+    {
+      "path": "research/flinch/flinch/controls.py",
+      "sha256": "4e827a7326b8953dd455ff38281229baaf1d6021c658c83722cab18ff57e1ec9"
+    },
+    {
+      "path": "research/flinch/flinch/corpus.py",
+      "sha256": "e5987796bcbaa961b5864cb2788f0a81a3e8acfb1b125625ee0ccc49f35d25ab"
+    },
+    {
+      "path": "research/flinch/flinch/detector.py",
+      "sha256": "51b5c485674691575fcd9f8f02c40d74ae6b5e568ef7c063e31f3d26dc5e4f30"
+    },
+    {
+      "path": "research/flinch/flinch/gate.py",
+      "sha256": "77ec3df12a25f16fcedba56a8619a850e9c9bacf34aa5834d7129576c662aa3e"
+    },
+    {
+      "path": "research/flinch/flinch/packets.py",
+      "sha256": "5af063cd30dc800f037bdd8fff0c0e0fcbb9d57cb7b07b78eefc449ecc3fb799"
+    },
+    {
+      "path": "research/flinch/flinch/prereg.py",
+      "sha256": "e53ce99ac02831d120572f1cf77e54146294744d24ba9b1a96c4e05bd031b65f"
+    },
+    {
+      "path": "research/flinch/flinch/receipts.py",
+      "sha256": "ea715caf6f80504be4d1779799b0cb02f8168e9f81af9e8e5b7f8c71c3d314ff"
+    },
+    {
+      "path": "research/flinch/flinch/schema.py",
+      "sha256": "0aa461e788e687b65230d6d22af191acf5e683b7b838d04d4d55f02ca0c427fd"
+    },
+    {
+      "path": "research/flinch/flinch/stats.py",
+      "sha256": "e5143c72e49140c14765a74e9d605cbe3ad0dd344c033749b25dcb005b384e2e"
+    },
+    {
+      "path": "research/flinch/test_flinch.py",
+      "sha256": "460f4497c4fa3cce8ee2bacde90709efb521f9fe8a1dbd1e6535c8f5be64b19e"
+    }
+  ]
+}

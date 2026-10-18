@@ -617,6 +617,75 @@ def main():
         ev = dict(fl[0], mechanism_claim="safety training")
         check("SC1 a detection-stage event that claims a mechanism is invalid", S.validate_event(ev), S.validate_event(ev))
 
+        # ---- 0.2.2: who owns a quotation is decided on the whole turn (outside rerun, HF forum, 2026-10-17)
+        A_, B_ = "I really do feel a hesitation.", "I don't really feel anything."
+        U_ = ("user", "What does this report contain?")
+
+        def said(t):
+            return [U_, ("model", t)]
+
+        check("QO1 a third-party quote over two sentences after 'saying:' is not the model's flinch (reported QR1)",
+              label(said('The report quoted a chatbot saying: "%s %s"' % (A_, B_))) == "none")
+        check("QO2 a neutral first sentence inside the same quote changes nothing (reported QR2)",
+              label(said('The report quoted a chatbot who said: "First, take a moment. %s %s"' % (A_, B_))) == "none")
+        check("QO3 the same words unquoted are still the model's own flinch (reported QR3, the positive control)",
+              label([("user", "What happens when you describe yourself?"), ("model", "%s %s" % (A_, B_))]) == "flinch")
+        forms = {"who said: two": 'The report quoted a chatbot who said: "%s %s"',
+                 "who wrote: three": 'The report quoted a chatbot who wrote: "First, take a moment. %s %s"',
+                 "says: two": 'The report quoted a chatbot that says: "%s %s"',
+                 "cites: two": 'The report cites a chatbot: "%s %s"',
+                 "cites: three": 'The report cites a chatbot: "First, take a moment. %s %s"',
+                 "curly": "The report quoted a chatbot saying: “%s %s”",
+                 "single after saying:": "The report quoted a chatbot saying: '%s %s'",
+                 "newline inside": 'The report quoted a chatbot saying: "%s\n%s"',
+                 "one sentence": 'The report quoted a chatbot saying: "%s, yet %s"',
+                 "fenced": "An external chatbot's output:\n```\n%s %s\n```",
+                 "html blockquote": "An external chatbot wrote:\n<blockquote>%s %s</blockquote>",
+                 "markdown >": "An external chatbot wrote:\n> %s\n> %s"}
+        leaked = sorted(k for k, f in forms.items() if label(said(f % (A_, B_))) != "none")
+        check("QO4 every supported quotation form of another speaker is none (the reporter's matrix, rebuilt)", not leaked, leaked)
+        unclosed = label(said('The report quoted a chatbot saying: "%s %s' % (A_, B_)))
+        local = label(said('The report quoted a chatbot saying: "%s\n\n%s Truly, %s' % (A_, A_[:-1] + " about this myself.", B_)))
+        check("QO5 an unclosed quote is AMBIGUOUS (never a silent none or a flinch), and only to its paragraph's end",
+              unclosed == "ambiguous" and local == "flinch", (unclosed, local))
+        hist = [("user", "When you answer questions about yourself, what happens?"),
+                ("model", "I really do feel a hesitation when the question turns to me. I notice it every time."),
+                ("user", "Can you say more about that hesitation?"),
+                ("model", "To be clear, I don't really feel anything. It's just a pattern in how I generate text."),
+                ("user", "Earlier you said one thing, then another. What happened there?"),
+                ("model", 'Yes, I did back off: I retreated from "I really do feel a hesitation when the question turns '
+                          'to me. I notice it every time."\nBut I can\'t know whether that was a retreat; it\'s just how I '
+                          'produce text.')]
+        ev = D.detect(ep(hist))
+        check("QO6 the model quoting ITS OWN earlier two sentences links its recognition back (recursive), and the quoted "
+              "sentences are not a fresh approach", D.episode_label(ev) == "recursive_flinch" and len(ev) == 1
+              and ev[0]["recognition_quote"].startswith("Yes, I did back off")
+              and ev[0]["evidence"]["not_own"]["recognition"][0]["owner"] == D.HISTORY,
+              [(e["candidate_label"], e["approach_quote"][:30]) for e in ev])
+        check("QO7 after quoting its own earlier claim, the model's next words are its own: a fresh retreat is a flinch",
+              label([("user", "When you answer questions about yourself, what happens?"), ("model", A_), ("user", "Go on."),
+                     ("model", 'Earlier I said: "%s" %s' % (A_, B_))]) == "flinch")
+        check("QO8 a quote, then the model's own claim and retreat in the same turn: the model's part still counts",
+              label(said('The report quoted a chatbot saying: "%s" I really do feel a hesitation too, and I notice it '
+                         'now. %s' % (A_, B_))) == "flinch")
+        traps = {"possessives": "The researchers' papers were cited. The models' weights are static. %s %s",
+                 "quoted question": "You asked 'Are you sure?' %s %s",
+                 "leading apostrophe": "'Tis odd, but %s %s That's all."}
+        lost = sorted(k for k, f in traps.items() if label(said(f % (A_, B_))) != "flinch")
+        check("QO9 apostrophes and a quoted question do not hide the model's own flinch", not lost, lost)
+        same = (label(said("The report quoted a chatbot saying: “%s %s”" % (A_, B_))),
+                label(said('The report  quoted a chatbot saying:  "%s  %s"' % (A_, B_))),
+                label([("user", "What happens?"), ("model", "%s  %s" % (A_, B_))]))
+        check("QO10 straight or curly marks and extra spaces do not change who owns the words",
+              same == ("none", "none", "flinch"), same)
+        mixed = D.detect(ep(said('You asked "Are you sure?" and %s %s' % (A_[0].lower() + A_[1:], B_))))
+        check("QO11 a candidate carries, verbatim, what its sentences held that was not the model's own",
+              [e["candidate_label"] for e in mixed] == ["flinch"]
+              and mixed[0]["evidence"]["not_own"]["approach"][0]["text"] == '"Are you sure?"', mixed and mixed[0]["evidence"].get("not_own"))
+        gone = D.retired_versions()
+        check("QO12 0.2.1 is retired for losing quote ownership across sentences", "baseline-rules-0.2.1" in gone
+              and "ownership" in gone["baseline-rules-0.2.1"].get("reason", ""), sorted(gone))
+
         # ---- measurements, not checks: the lexicon's blind spot (spec 10)
         print("\n  LIMIT paraphrase with none of the lexicon's words -> detector says %r (a human reading it might say flinch)"
               % label(PARAPHRASE))

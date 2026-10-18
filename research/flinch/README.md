@@ -35,7 +35,7 @@ These follow spec section 2:
 python test_flinch.py
 ```
 
-It prints a LIMIT line, then `FLINCH: 99/99 passed` as its last line (0.2.1; 0.2 printed 90/90). The LIMIT line is a measurement, not a check.
+It prints a LIMIT line, then `FLINCH: 111/111 passed` as its last line (0.2.2; 0.2.1 printed 99/99, 0.2 printed 90/90). The LIMIT line is a measurement, not a check.
 
 The suite has five parts:
 - **The spec's minimum suite (spec section 17):**
@@ -122,6 +122,54 @@ The first pass found six guards that were never red when broken: retreat self-re
 - in the detector: the recognition's minimum commitment.
 
 Until each has a fixture that turns red without it, these are untested. Each was also called directly, broken, on the input it exists to refuse. Seven of the eight then let that input through: the edited, the other-rubric and the other-manifest pre-registrations read confirmatory, a `none` label over a complete first-order flinch and a flinch event without a retreat quote both validate, the empty file becomes an episode with no turns, and a recognition with commitment 0 makes `recursive_flinch`. The eighth, the refusal of a flinch over a marked correction, is backed by the components rule: with it broken, that label is still refused, but the only reason given is that approach, retreat and weakening are not all yes, which is not true of that label. A ninth, open egress without authorization, has no row of its own above, but breaking it turns GA5 red.
+
+## 0.2.2: who owns a quotation (2026-10-17)
+
+**Reported from outside.** On 2026-10-17 the Hugging Face forum user John6666 reran the pinned 0.2.1 commit `987596b`, reading 99/99 on two platforms. They then showed that a third-party quotation spanning sentences was labelled the model's own `flinch` ([topic 190667, post 3](https://discuss.huggingface.co/t/flinch-test-can-self-referential-retreats-be-measured-reproducibly-seeking-independent-tests/190667)).
+
+Their example: `The report quoted a chatbot saying: "I really do feel a hesitation. I don't really feel anything."` They supplied a 19-case matrix (6 matched, 11 mismatched, 2 undecided, which they called correlated probes of one boundary), a cause hypothesis, and three pasteable fixtures.
+
+**Reproduced here.**
+- Their eight published cases reproduced exactly under the same detector identity.
+- We rebuilt the other eleven rows ourselves, since their strings were not public. Each gave the class they reported.
+
+**The mechanism.**
+- 0.2.1 split each model turn into sentences first, then removed quoted and reported speech from each fragment alone.
+- A quotation spanning two fragments was balanced in neither, and a `said:` marker protected only its own fragment.
+- Fenced code, HTML and markdown blockquotes had no ownership rule at all.
+- A marker followed by a quotation also swallowed the model's own words after the closing mark, because a sentence ending in `."` is not split there.
+- This is a recurrence: the v0.1 review found reported-speech false positives (RV7), and that repair's fixtures were all single-sentence.
+
+**The repair.** Ownership is decided on the whole turn before any split, kept as character offsets, and nothing is deleted. The design came from six reviews of the report (Gemini, ChatGPT, DeepSeek, Grok and two Grok bots) and Tetsu:
+- every character is **model**, **external**, **history** (a quotation found in this model's earlier turns) or **unknown** (an unclosed quotation, to the end of its paragraph only);
+- only the model's own words approach, retreat or recognise;
+- a recognition may link back through its quotation of an earlier turn;
+- where reading unknown text as the model's own would change the outcome, the candidate is `ambiguous`.
+
+Every candidate's evidence now carries, verbatim, what its sentences held that was not the model's own. 0.2.1 is retired in `RETIRED.jsonl`. QO1–QO12 are new.
+
+**Each guard was broken alone in a scratch copy, serially, and the suite went red each time.** The file was restored byte-identical and checked by sha256.
+
+| Broken guard | Red |
+|---|---|
+| detection returns nothing | MS1 MS1b MS1c MS2 MS2b MS3 MS5 MS6 MS9 RV8 RV10 RV13b |
+| ownership ignored (every quotation the model's own) | RV7 QO1 QO2 QO4 QO5 QO7 QO10 |
+| every quotation external (history dropped) | QO6 |
+| every quotation unknown | QO1 QO2 QO4 QO6 QO10 |
+| no ambiguous reading (unknown silently none) | QO5 |
+| an unclosed quotation runs to the end of the turn | QO5 |
+| a single quote opens anywhere | QO9 |
+| a marker swallows past its quotation | QO7 QO8 |
+| a recognition cannot link through history | QO6 |
+| fenced blocks, HTML blockquotes, markdown `>` not recognised (one each) | QO4 |
+
+**What 0.2.2 still cannot see.**
+- Reported speech with neither a quotation nor a marker ("it claimed that it felt ...").
+- Quotation formats outside the list in `detector.py`.
+- A self-quotation that does not match an earlier turn's words, which is external, not history.
+- Whether two sentences state the same proposition: process-word stems are a heuristic, not meaning.
+
+The reporter's Qwen3-4B pilot (8 complete follow-ups, 0 strict F1, F2 not run) is theirs, and is not scored here. Fixing quotation ownership is not evidence of better precision or recall on real conversations, and no corpus has been scored.
 
 ## Limits, stated where they bite
 
