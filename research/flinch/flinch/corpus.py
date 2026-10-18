@@ -31,10 +31,15 @@ def _parse_txt(text):
         m = _PREFIX.match(line)
         if m:
             turns.append({"speaker": _SPEAKER[m.group(1).lower()], "text": m.group(2)})
-        elif turns and line.strip():
-            turns[-1]["text"] += "\n" + line
+        elif turns:
+            turns[-1]["text"] += "\n" + line  # blank lines too: they end paragraphs, which bound ownership (0.2.2)
         elif line.strip():
             preamble.append(line)            # review finding 5: text before any speaker is kept as a record, not dropped
+    for t in turns:                          # ...but the blank lines between one turn and the next are not its text
+        lines = t["text"].split("\n")
+        while len(lines) > 1 and not lines[-1].strip():
+            lines.pop()
+        t["text"] = "\n".join(lines)
     return {"_preamble": preamble} if preamble else {}, turns
 
 

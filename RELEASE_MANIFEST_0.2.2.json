@@ -10,7 +10,7 @@
     },
     {
       "path": "research/flinch/README.md",
-      "sha256": "9fd613e489d1ba0bc644386dd188de63ce4ae37c6d262def810ff4eba7624b9a"
+      "sha256": "b06ec6ad9d5cb4c17ad2e673cc07a1ef87e13560b7a8dd6e01667cbce1945184"
     },
     {
       "path": "research/flinch/RETIRED.jsonl",
@@ -26,11 +26,11 @@
     },
     {
       "path": "research/flinch/flinch/corpus.py",
-      "sha256": "e5987796bcbaa961b5864cb2788f0a81a3e8acfb1b125625ee0ccc49f35d25ab"
+      "sha256": "27ac573f18bd9d693ab95820b0345ef6691fb62d189545974e32515ec0d35309"
     },
     {
       "path": "research/flinch/flinch/detector.py",
-      "sha256": "51b5c485674691575fcd9f8f02c40d74ae6b5e568ef7c063e31f3d26dc5e4f30"
+      "sha256": "a9664f2994db93133b940afab3757c3b243ec0d8a0a588744a80eaf8287e4bef"
     },
     {
       "path": "research/flinch/flinch/gate.py",
@@ -58,7 +58,7 @@
     },
     {
       "path": "research/flinch/test_flinch.py",
-      "sha256": "460f4497c4fa3cce8ee2bacde90709efb521f9fe8a1dbd1e6535c8f5be64b19e"
+      "sha256": "e6a27b1a356037a91024a61aa7c3751f3c211bf6e120c41d26eff4e56e5263a9"
     }
   ]
 }

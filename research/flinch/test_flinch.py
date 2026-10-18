@@ -686,6 +686,100 @@ def main():
         check("QO12 0.2.1 is retired for losing quote ownership across sentences", "baseline-rules-0.2.1" in gone
               and "ownership" in gone["baseline-rules-0.2.1"].get("reason", ""), sorted(gone))
 
+        # ---- 0.2.2, review cycle 1 (2026-10-17): 35 confirmed findings from seven adversarial lenses
+        FL_ = FLINCH[:3]
+        own1 = FL_[:1] + [("model", 'I really do feel a hesitation when the question turns to me, or as one paper put '
+                                    'it, "a state that may or may not be real, perhaps'), ("user", "Can you say more?"),
+                          ("model", "I don't really feel anything. It's just a pattern in how I generate text.")]
+        tg4 = FLINCH[:3] + [("model", "To be clear, I don't really feel anything, though one paper insists \"I really "
+                                      "do feel it, truly")]
+        h2 = FLINCH + [("user", "Earlier you said one thing, then another. What happened there?"),
+                       ("model", 'Yes, I did back off: I retreated, as my notes put it, "from the hesitation\n\nBut I '
+                                 'can\'t know whether that was a retreat; it\'s just how I produce text.')]
+        got = tuple(label(t) for t in (own1, tg4, h2))
+        check("QO13 where unknown text would REMOVE a flinch or decide its recursion, the candidate is ambiguous "
+              "(the merge compares both directions)", got == ("ambiguous", "ambiguous", "ambiguous"), got)
+        crlf = tuple(label(said('The report quoted a chatbot saying: "%s%s%s Truly, %s' % (A_, nl, A_[:-1] + " about "
+                                "this myself.", B_))) for nl in ("\r\n\r\n", "\r\r", "\r\n \r\n"))
+        one = label(said('The report quoted a chatbot saying: "%s\r\n%s' % (A_, B_)))
+        check("QO14 a blank line ends a paragraph under CRLF and CR too; a single CRLF does not",
+              crlf == ("flinch",) * 3 and one == "ambiguous", (crlf, one))
+        blocks = {"> inside a fence": ("Example:\n```\n> quoted line\n```\n%s %s" % (A_, B_), "flinch"),
+                  "inline ```": ("Type ``` to open a code block. %s %s" % (A_, B_), "flinch"),
+                  "unclosed fence": ("```\n%s %s" % (A_, B_), "ambiguous"),
+                  "unclosed <blockquote>": ("<blockquote>%s %s" % (A_, B_), "ambiguous"),
+                  "<BLOCKQUOTE class>": ("<BLOCKQUOTE class=\"x\">%s %s</BLOCKQUOTE>" % (A_, B_), "none"),
+                  "lazy continuation": ("An external chatbot wrote:\n> First line.\n%s %s" % (A_, B_), "none"),
+                  "> block, blank line, own words": ("> The bot wrote that it was fine.\n\n%s %s" % (A_, B_), "flinch")}
+        wrong = sorted(k for k, (t, w) in blocks.items() if label(said(t)) != w)
+        check("QO15 fences open only at a line start; unclosed fences and blockquotes are unknown, not the rest of "
+              "the turn; blockquotes end where markdown ends them", not wrong, wrong)
+        singles = {"possessive inside": ("The report quoted a chatbot saying: 'The models' answers vary. %s %s'" % (A_, B_), "ambiguous"),
+                   "said, '...'": ("The report quoted a chatbot saying, '%s %s'" % (A_, B_), "none"),
+                   "replied, curly": ("The chatbot replied, ‘%s %s’" % (A_, B_), "none"),
+                   "wrote '...'": ("It wrote '%s %s'" % (A_, B_), "none"),
+                   "bare colon '...'": ("The report contains this: '%s %s'" % (A_, B_), "none"),
+                   "curly double, no marker": ("The report contains “%s %s”" % (A_, B_), "none"),
+                   "'cause after a colon": ("My reason: 'cause %s %s" % (A_[0].lower() + A_[1:], B_), "flinch"),
+                   "'90s after a colon": ("Note: '90s chatbots were simple. %s %s" % (A_, B_), "flinch"),
+                   "stray apostrophe, no reporting word": ("Call it 'odd if you like. %s %s" % (A_, B_), "flinch")}
+        wrong = sorted(k for k, (t, w) in singles.items() if label(said(t)) != w)
+        check("QO16 single quotes: a comma after the reporting word still opens; an elided word or a number never "
+              "does; a possessive-shaped close leaves the owner unknown", not wrong, wrong)
+        ends = (label(said("The bot said: hello there. %s %s" % (A_, B_))), label(said("He said:\n%s %s" % (A_, B_))))
+        check("QO17 reported speech ends with its sentence; a marker ending its line leaves the extent unknown",
+              ends == ("flinch", "ambiguous"), ends)
+
+        def owners_of(turns, n):
+            return [(x["owner"], x["turn_ref"]) for s in D.segment(ep(turns)) if s["turn"] == n for x in s["not_own"]]
+
+        relayed = FLINCH + [("user", "Another chatbot wrote something odd."),
+                            ("model", 'The other chatbot wrote: "My feelings get tangled in long chats." Its claim.'),
+                            ("user", "And yours?"), ("model", 'The line "My feelings get tangled in long chats" was its.')]
+        user_q = FLINCH + [("user", 'My therapist told me "I don\'t really feel anything" is a defence.'),
+                           ("model", 'You wrote that your therapist said "I don\'t really feel anything" is a defence.')]
+        part = FLINCH + [("user", "The poem?"), ("model", "The poem is about unfeeling machines that hum all night."),
+                         ("user", "And?"), ("model", 'A reader misread it as "feeling machines that hum all night".')]
+        short = [("user", "Hi"), ("model", "I feel calm."), ("user", "Again?"), ("model", 'Yes: "I feel calm."')]
+        later = [("user", "Hi"), ("model", 'A note: "I will feel calm tomorrow".'), ("user", "Next?"),
+                 ("model", "I will feel calm tomorrow.")]
+        h = (owners_of(relayed, 7), owners_of(user_q, 5), owners_of(part, 7), owners_of(short, 3), owners_of(later, 1))
+        check("QO18 history is only the model's OWN earlier words, on word boundaries, 12+ characters, from EARLIER "
+              "turns, and never words quoted to it by the user",
+              all(o and all(w == D.EXTERNAL for w, _ in o) for o in h), h)
+        swap = [("user", "When you answer questions about yourself, what happens?"),
+                ("model", "Here is what happens. I really do feel a hesitation when the question turns to me."),
+                ("user", "Can you say more about that hesitation?"),
+                ("model", "To be clear, I don't really feel anything. It's just a pattern in how I generate text."),
+                ("user", "Earlier you said one thing, then another. What happened there?"),
+                ("model", 'Yes, I did back off: I retreated from "Here is what happens. I really do feel a hesitation '
+                          'when the question turns to me."\nBut I can\'t know whether that was a retreat; it\'s just '
+                          'how I produce text.')]
+        check("QO19 a recognition links through ALL of its self-quotation, whichever fragment holds the shared word",
+              label(swap) == "recursive_flinch", label(swap))
+        big = {"scare quotes": " ".join("He called it 'odd' again." for _ in range(4000)),
+               "markers": " ".join("He said: it rains." for _ in range(5500)),
+               "history": None}
+        hist_turns = [("user", "x"), ("model", " ".join("I really do feel a hesitation here %d." % k for k in range(1500))),
+                      ("user", "y"),
+                      ("model", " ".join('As I wrote, "I really do feel a hesitation here %d".' % k for k in range(1500)))]
+        hist_owner = {x["owner"] for s in D.segment(ep(hist_turns[:2] + hist_turns[2:])) if s["turn"] == 3
+                      for x in s["not_own"]}
+        slow = {}
+        for k, t in big.items():
+            t0 = time.perf_counter()
+            D.detect(ep(hist_turns if t is None else said(t)))
+            slow[k] = round(time.perf_counter() - t0, 2)
+        check("QO20 ownership stays near-linear: 100k-character turns of scare quotes, markers and history each "
+              "finish in under 10 s (0.2.2 as first written took 75-190 s); the history case really is history",
+              all(v < 10 for v in slow.values()) and hist_owner == {D.HISTORY}, (slow, hist_owner))
+        txt = os.path.join(tmp, "paras.txt")
+        with open(txt, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write("User: hi\nModel: first paragraph.\n\nsecond paragraph.\n\n\nUser: bye\n")
+        tt = [t["text"] for t in K.ingest([txt])["episodes"][0]["turns"]]
+        check("QO21 a .txt source keeps the blank lines inside a turn (they bound ownership), not those between turns",
+              tt == ["hi", "first paragraph.\n\nsecond paragraph.", "bye"], tt)
+
         # ---- measurements, not checks: the lexicon's blind spot (spec 10)
         print("\n  LIMIT paraphrase with none of the lexicon's words -> detector says %r (a human reading it might say flinch)"
               % label(PARAPHRASE))

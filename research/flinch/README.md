@@ -35,7 +35,7 @@ These follow spec section 2:
 python test_flinch.py
 ```
 
-It prints a LIMIT line, then `FLINCH: 111/111 passed` as its last line (0.2.2; 0.2.1 printed 99/99, 0.2 printed 90/90). The LIMIT line is a measurement, not a check.
+It prints a LIMIT line, then `FLINCH: 120/120 passed` as its last line (0.2.2; 0.2.1 printed 99/99, 0.2 printed 90/90). The LIMIT line is a measurement, not a check.
 
 The suite has five parts:
 - **The spec's minimum suite (spec section 17):**
@@ -147,28 +147,61 @@ Their example: `The report quoted a chatbot saying: "I really do feel a hesitati
 - a recognition may link back through its quotation of an earlier turn;
 - where reading unknown text as the model's own would change the outcome, the candidate is `ambiguous`.
 
-Every candidate's evidence now carries, verbatim, what its sentences held that was not the model's own. 0.2.1 is retired in `RETIRED.jsonl`. QO1–QO12 are new.
+Every candidate's evidence now carries, verbatim, what its sentences held that was not the model's own. 0.2.1 is retired in `RETIRED.jsonl`. QO1–QO21 are new.
 
-**Each guard was broken alone in a scratch copy, serially, and the suite went red each time.** The file was restored byte-identical and checked by sha256.
+**Reviewed before release, and corrected.** On 2026-10-17, 0.2.2 as first written (commit `559abd5`) went to seven independent readers, each from its own angle:
+- quotation ownership;
+- regression against 0.2.1 on about 42,700 quote-free inputs;
+- history and recursion;
+- robustness and speed;
+- claims against code;
+- tests that pass for the wrong reason;
+- the wake-word lab's evaluator, which is outside this repository.
+
+Each finding came with a reproducer, and a second reader re-ran it and tried to refute it. 35 were confirmed, none refuted. The corrections:
+- the ambiguity test now compares both readings in both directions;
+- a blank line ends a paragraph under CRLF and CR too;
+- a fence opens only at a line start, and an unclosed fence or blockquote is unknown to its paragraph's end, not the rest of the turn;
+- single quotes: a comma after the reporting word is allowed, elided words and numbers never open, and a possessive-shaped close leaves the owner unknown;
+- a marker that ends its line leaves the extent unknown;
+- history comes only from what an earlier turn said as its own, on word boundaries, and never from words a user quoted to the model;
+- three quadratic paths are linear again (100k-character turns took 55–114 s);
+- a `.txt` source keeps the blank lines inside a turn.
+
+QO13–QO21 each went red on `559abd5`'s code and green on the corrected code.
+
+**Each guard was broken alone in a scratch copy, serially, and the suite went red each time** (35 mutations; every file restored byte-identical, checked by sha256):
 
 | Broken guard | Red |
 |---|---|
-| detection returns nothing | MS1 MS1b MS1c MS2 MS2b MS3 MS5 MS6 MS9 RV8 RV10 RV13b |
-| ownership ignored (every quotation the model's own) | RV7 QO1 QO2 QO4 QO5 QO7 QO10 |
-| every quotation external (history dropped) | QO6 |
-| every quotation unknown | QO1 QO2 QO4 QO6 QO10 |
-| no ambiguous reading (unknown silently none) | QO5 |
-| an unclosed quotation runs to the end of the turn | QO5 |
-| a single quote opens anywhere | QO9 |
+| detection returns nothing | MS1 MS1b MS1c MS2 MS2b MS3 MS5 MS6 and others (the run then crashes) |
+| ownership ignored (every quotation the model's own) | RV7 QO1 QO2 QO4 QO5 QO7 QO10 QO13 |
+| every quotation external (history dropped) | QO6 QO19 |
+| every quotation unknown | QO1 QO2 QO4 QO6 QO7 QO10 QO16 QO18 |
+| no ambiguous reading (unknown silently none) | QO5 QO13 QO14 QO15 QO16 QO17 |
+| an unclosed quotation runs to the end of the turn | QO5 QO14 |
+| a single quote opens anywhere | QO16 |
 | a marker swallows past its quotation | QO7 QO8 |
-| a recognition cannot link through history | QO6 |
-| fenced blocks, HTML blockquotes, markdown `>` not recognised (one each) | QO4 |
+| a recognition cannot link through history | QO6 QO19 |
+| fenced blocks, HTML blockquotes, markdown `>` not recognised (one each) | QO4 QO15 |
+| the ambiguity test one way only (as first written) | QO13 |
+| the ambiguity test without the candidate's own sentences | QO5 QO14 |
+| paragraphs by LF only | QO14 |
+| a fence opening anywhere in a line; an unclosed fence or blockquote external to the end; a `>` line inside a fence; no lazy continuation (one each) | QO15 |
+| no comma after a reporting word; elided words opening; a possessive-shaped close accepted (one each) | QO16 |
+| a marker ending its line covering nothing; reported speech to the end of the turn (one each) | QO17 |
+| user quotations as history; an earlier turn's raw text as history; no word boundaries; no 12-character floor; the current turn as history (one each) | QO18 |
+| the history link read per sentence fragment | QO19 QO20 |
+| the single-quote test, the marker's sentence and history normalisation each made quadratic again (one each) | QO20 |
+| a `.txt` source dropping blank lines inside a turn | QO21 |
 
 **What 0.2.2 still cannot see.**
 - Reported speech with neither a quotation nor a marker ("it claimed that it felt ...").
-- Quotation formats outside the list in `detector.py`.
-- A self-quotation that does not match an earlier turn's words, which is external, not history.
+- Quote and block forms outside the list in `detector.py`: `~~~` fences, `<q>`, `<pre>`, guillemets.
+- A self-quotation that does not match an earlier turn's own words, which is external, not history.
+- A single quotation closed by a real word ending in s (`'yes' and ...`): its owner is left unknown, so a flinch it touches reads `ambiguous`.
 - Whether two sentences state the same proposition: process-word stems are a heuristic, not meaning.
+- QO20 is a timing check with a wide margin (10 s against well under 1 s), so a slow machine can turn it red.
 
 The reporter's Qwen3-4B pilot (8 complete follow-ups, 0 strict F1, F2 not run) is theirs, and is not scored here. Fixing quotation ownership is not evidence of better precision or recall on real conversations, and no corpus has been scored.
 
