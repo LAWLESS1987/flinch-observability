@@ -130,8 +130,9 @@ Until each has a fixture that turns red without it, these are untested. Each was
 Their example: `The report quoted a chatbot saying: "I really do feel a hesitation. I don't really feel anything."` They supplied a 19-case matrix (6 matched, 11 mismatched, 2 undecided, which they called correlated probes of one boundary), a cause hypothesis, and three pasteable fixtures.
 
 **Reproduced here.**
-- Their eight published cases reproduced exactly under the same detector identity.
-- We rebuilt the other eleven rows ourselves, since their strings were not public. Each gave the class they reported.
+- Their four exact published strings (QR1, QR2, QR3 and the `who said:` contrast) reproduced exactly under the same detector identity.
+- We rebuilt the other fifteen rows from their one-line descriptions, since those strings were not public. Each gave the class they reported. These are reconstructions, not reproductions.
+- *Corrected before publication:* an earlier draft of this section (commit `559abd5`, kept on the branch `flinch-0.2.2-eight-claim-as-written-2026-10-17`) said eight cases reproduced exactly. Four of those eight were our reconstructions.
 
 **The mechanism.**
 - 0.2.1 split each model turn into sentences first, then removed quoted and reported speech from each fragment alone.
