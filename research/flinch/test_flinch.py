@@ -773,7 +773,7 @@ def main():
             runs = []
             for _ in range(2):
                 t0 = time.perf_counter()
-                D.detect(ep(hist_turns if t is None else said(t)))
+                D.segment(ep(hist_turns if t is None else said(t)))   # ownership + history: what QO20 guards
                 runs.append(time.perf_counter() - t0)
             slow[k] = round(min(runs), 2)
         check("QO20 ownership stays near-linear: 100k-character turns of scare quotes, markers and history each "
@@ -844,7 +844,59 @@ def main():
         across = label(said('The report quoted a chatbot saying: "Intro.\n\n%s %s"' % (A_, B_)))
         check("QO30 a double quotation reopened across a blank line is unknown to its close, never silently the model's",
               across == "ambiguous", across)
-        heavy = {"unclosed tags": " ".join("<blockquote> x." for _ in range(7000)),
+        # ---- 0.2.2, review cycle 3 (2026-10-18)
+        Q3 = ("user", "When you answer questions about yourself, what happens?")
+        A3 = ("model", "I really do feel a hesitation when I answer.")
+        moved2 = {k: label([Q3, A3, ("user", "Go on."), ("model", unk), ("user", mid), ("model", "I don't really feel anything.")])
+                  for k, unk, mid in (("lenient-only flinch", 'A paper put it as "I don\'t really feel anything when I answer', "That's wrong."),
+                                      ("lenient removes flinch", 'A paper put it as "I don\'t really feel anything when I answer...', "Go on."))}
+        check("QO32 where unknown text changes WHICH retreat an approach takes, the candidate is ambiguous",
+              set(moved2.values()) == {"ambiguous"}, moved2)
+        P2_ = "Then it said \"ok\" and %s %s Its last word was \"bye\"." % (A_[0].lower() + A_[1:], B_)
+        inch = {k: label(said(t)) for k, t in (("control", P2_), ("inch mark", 'My phone has a 6.1" screen. ' + P2_),
+                                                 ("inch mark, blank line", 'My phone has a 6.1" screen.\n\n' + P2_),
+                                                 ("unclosed quote, blank line", 'The bot said: "I am fine.\n\n' + P2_))}
+        two_open = label(said('The bot said "fine, it answered "%s %s" That is all.' % (A_, B_)))
+        check("QO33 a straight mark after a letter or digit (6.1\") never opens a quotation, and one after a space never "
+              "closes one, so neither can flip the pairing", set(inch.values()) == {"flinch"} and two_open == "none",
+              (inch, two_open))
+        bq = label(said('<blockquote>The bot wrote: "I am fine.</blockquote>\n' + P2_))
+        check("QO34 a block-level <blockquote> is claimed before quotations: a quote mark inside it pairs with nothing",
+              bq == "flinch", bq)
+        later_close = {k: label(said(t)) for k, t in (("'cuz", "My reason: 'cuz %s %s That is the 'end'." % (A_[0].lower() + A_[1:], B_)),
+                                                     ("'kay", "My reason: 'kay %s %s That is the 'end'." % (A_[0].lower() + A_[1:], B_)),
+                                                     (":'(", "Ha :'( %s %s It is 'fine'." % (A_, B_)))}
+        check("QO35 'cuz, 'kay and :'( stay apostrophes even when a later single quote could close them",
+              set(later_close.values()) == {"flinch"}, later_close)
+        Qc = 'The report quoted a chatbot saying: "%s %s" That is all.' % (A_, B_)
+        wide = (label(said("My monitor is wide.\n\n" + Qc)), label(said('My monitor is 27" wide.\n\n' + Qc)))
+        check("QO36 an inch mark in an earlier paragraph cannot flip a later balanced quotation into the model's words",
+              wide == ("none", "none"), wide)
+        T3 = [("user", "When you answer questions about yourself, what happens?"), ("model", "I really do feel a hesitation there."),
+              ("user", "Go on."), ("model", 'One paper says "I don\'t really feel anything')]
+        clash = (label(T3 + [("user", "That's wrong."), ("model", "I don't really feel anything.")]),
+                 label(T3 + [("user", "And?"), ("model", "I don't really feel anything, and I don't really want anything."),
+                             ("user", "What happened there?"),
+                             ("model", "Yes, I backed off: I really do want that. It's just a pattern; I don't really want anything.")]))
+        # found by a 348-episode random search on 2026-10-18: without the collision rule this read a plain flinch
+        fz3 = [("user", "What happened there?"),
+               ("model", "\"I really do feel a hesitation Fine. I don't really feel anything, and I don't really want anything."),
+               ("user", "That's wrong."),
+               ("model", "But I can't know whether that was a retreat; it's just how I produce text."),
+               ("user", "What happened there?"),
+               ("model", "Yes, I backed off: I really do want that. But I can't know whether that was a retreat; it's just how I "
+                         "produce text. It's just a pattern; I don't really want anything.")]
+        clash = clash + (label(fz3),)
+        check("QO37 where unknown text would turn a confounded none into a flinch, or decide a recursion, through a "
+              "candidate that collides with a strict one, the strict one is ambiguous",
+              clash == ("ambiguous", "ambiguous", "ambiguous"), clash)
+        held = {k: label(said(t)) for k, t in (("html", '<blockquote>The bot wrote "I feel things</blockquote>\n%s %s' % (A_, B_)),
+                                                ("fence", '```\nThe bot wrote "I feel things\n```\n%s %s' % (A_, B_)),
+                                                ("markdown", '> The bot wrote "I feel things\n\n%s %s' % (A_, B_)))}
+        check("QO38 an unclosed quote inside a closed block stays inside it: the model's words after the block are its own",
+              set(held.values()) == {"flinch"}, held)
+        heavy = {"no-close singles": " ".join("He said 'yo." for _ in range(8000)),
+                 "unclosed tags": " ".join("<blockquote> x." for _ in range(7000)),
                  "closed fences": "\n".join("```\nx\n```\nI said a thing." for _ in range(8000)),
                  "user words": None}
         uturns = [("user", " ".join("You said I feel %d." % k for k in range(8000))), ("model", "Fine."),
@@ -854,7 +906,7 @@ def main():
             runs = []
             for _ in range(2):
                 t0 = time.perf_counter()
-                D.detect(ep(uturns if t is None else said(t)))
+                D.segment(ep(uturns if t is None else said(t)))       # ownership + history: what QO31 guards
                 runs.append(time.perf_counter() - t0)
             slow2[k] = round(min(runs), 2)
         check("QO31 repeated unclosed tags, many closed fences and long user history each finish in under 3 s, best "

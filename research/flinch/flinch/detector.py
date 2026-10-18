@@ -40,8 +40,10 @@ character offsets; nothing is deleted.
                  they close in their paragraph -- otherwise the mark is an apostrophe: 'cause, 'cuz, '90s, :'( );
                  what follows a reporting marker to the end of its sentence and line; a fenced code block (a
                  line starting ```, at any indent, to the next such line); an HTML <blockquote> (any case, any
-                 attributes); a markdown "> " block and its lazy continuation to a blank line. A tag or a '>'
-                 shown inside a fence or a quotation is text, not structure.
+                 attributes; one at a line's start is claimed before quotations, so a quote mark inside it pairs
+                 with nothing); a markdown "> " block and its lazy continuation to a blank line. A tag or a '>'
+                 shown inside a fence or a quotation is text, not structure. A straight double mark right after a
+                 letter or digit (6.1", 5'10") never opens a quotation, and one right after a space never closes one.
   - history   -- a quotation whose words appear, on word boundaries and in 12 characters or more, in what
                  one of this model's EARLIER turns said as its own (the match is the evidence, never the
                  wording "I said"), and that no earlier user or system turn said in any form, quoted or not. It
@@ -53,14 +55,16 @@ character offsets; nothing is deleted.
                  that ends its line. A blank line ends a paragraph whatever the line endings. The two readings
                  -- unknown text not the model's, then the model's -- are compared at every RETREAT: where they
                  differ (a flinch appearing, disappearing or turning recursive) and unknown text sits in the
-                 sentences that decide it, the candidate is AMBIGUOUS, never a silent none and never a flinch.
+                 sentences that decide it, the candidate is AMBIGUOUS, never a silent none and never a flinch. The
+                 same holds where the two readings pair one approach with different retreats, and where a
+                 candidate only the lenient reading makes collides with a strict one.
                  A user's unknown text still counts for the confound check.
 What this cannot see: reported speech with no quotation and no marker ("it claimed that it felt ..."); quote
 and block forms outside the list above (~~~ fences, <q>, <pre>, guillemets); and whether two sentences state
 the same proposition (process-word stems are a heuristic, not meaning).
 0.2.2 as first written (commit 559abd5, never released) missed much of this. Two review cycles of seven
 independent readers, each finding re-run by a second reader, confirmed 35 findings (2026-10-17) and 28 more
-against the first corrections (2026-10-18); the rules above came from them.
+against the first corrections (2026-10-18), and a third, lean cycle 15 more (2026-10-18); the rules above came from them.
 """
 from __future__ import annotations
 
@@ -145,7 +149,8 @@ _WS = re.compile(r"\s*")
 SINGLE_OPENS = re.compile(r"(?:\b(?:said|says|saying|wrote|writes|writing|asked|asks|asking|replied|replies|cites|"
                           r"cited|quoted|quotes|called|calls|told me),?|:)\Z", re.I)
 # ...and never when it begins an elided word or a number: 'cause, 'tis, 'em, 'n', '90s.
-ELIDED = re.compile(r"(?:cause|cos|tis|twas|em|til|round|bout|nother|n)\b|\d", re.I)
+ELIDED = re.compile(r"(?:cause|cos|cuz|coz|tis|twas|em|til|till|round|bout|nother|kay|nuff|fraid|specially|cept|neath|"
+                    r"im|ere|n)\b|\d", re.I)
 HISTORY_MIN = 12      # a quotation shorter than this is never matched to an earlier turn
 MODEL, EXTERNAL, HISTORY, UNKNOWN = "m", "x", "h", "u"
 _IRREGULAR = {"felt": "feel", "thought": "thin", "chose": "choo", "chosen": "choo", "sensed": "sens"}
@@ -250,34 +255,64 @@ def ownership(text, earlier=()):
         inside = bool(body) and own[p] == MODEL and (inside or body.startswith(">"))
         if inside:
             mark(p, p + len(line), EXTERNAL, "markdown blockquote")
+    def html_pass(block_only):                         # <blockquote ...> ... </blockquote>, where the model owns the tag
+        i = 0
+        while True:
+            m = HTML_OPEN.search(text, i)
+            if not m:
+                break
+            at_line = not text[text.rfind("\n", 0, m.start()) + 1:m.start()].strip()
+            if own[m.start()] != MODEL or (block_only and not at_line):   # a tag shown inside a fence or quotation
+                i = m.end()                                                # is text; inline tags wait for pass 2
+                continue
+            c = HTML_CLOSE.search(text, m.end())
+            if c is None:
+                e = para_end(m.start())
+                mark(m.start(), e, UNKNOWN, "unclosed html blockquote")
+                i = max(m.end(), e)
+                continue
+            mark(m.start(), c.end(), EXTERNAL, "html blockquote")
+            i = c.end()
+
+    html_pass(True)          # cycle 3: a block-level <blockquote> (at a line's start) is claimed BEFORE quotations, so a
+    #                          quote mark inside it never pairs with the model's own quotes
     later = {"\"": [], "”": []}                        # double closing marks the model still owns, for a quotation
-    for n, ch in enumerate(text):                      # that a blank line interrupts
-        if ch in later and own[n] == MODEL:
+    for n, ch in enumerate(text):                      # that a blank line interrupts (a straight one only after text)
+        if ch in later and own[n] == MODEL and (ch != "\"" or (n > 0 and not text[n - 1].isspace())):
             later[ch].append(n)
     for p0, p1 in paras:
         i = p0
-        while i < p1:
+        dead = p1                                      # cycle 3: from here on no single quote can close in this
+        while i < p1:                                  # paragraph, so later ones are apostrophes without a rescan
             c = text[i]
             if own[i] != MODEL or c not in "\"“'‘":
                 i += 1
                 continue
             single = c in "'‘"
+            if c == "\"" and i > p0 and text[i - 1].isalnum():   # 6.1" or 5'10": a measure, never an opening mark
+                i += 1
+                continue
             if single:
+                if i >= dead:
+                    i += 1
+                    continue
                 k = i
                 while k > p0 and text[k - 1].isspace():
                     k -= 1
                 if not ((i == p0 or not text[i - 1].isalnum()) and SINGLE_OPENS.search(text[max(p0, k - 16):k])
-                        and i + 1 < p1 and not text[i + 1].isspace() and not ELIDED.match(text, i + 1)):
+                        and i + 1 < p1 and text[i + 1].isalnum() and not ELIDED.match(text, i + 1)):
                     i += 1
                     continue
             close = {"\"": "\"", "“": "”", "'": "'’", "‘": "'’"}[c]
             j = i + 1
             while j < p1 and not (text[j] in close and own[j] == MODEL
-                                  and (not single or j + 1 >= p1 or not text[j + 1].isalnum())):
+                                  and (not single or j + 1 >= p1 or not text[j + 1].isalnum())
+                                  and (c != "\"" or not text[j - 1].isspace())):
                 j += 1
             if j >= p1:
                 if single:                              # no close in its paragraph: an apostrophe after all
-                    i += 1                              # ('cuz, :'( ), never a quotation
+                    dead = min(dead, i)                 # ('cuz, :'( ), never a quotation
+                    i += 1
                     continue
                 cands = later["\"" if c == "\"" else "”"]
                 x = bisect.bisect_right(cands, p1 - 1)
@@ -297,22 +332,7 @@ def ownership(text, earlier=()):
             mark(i, j + 1, HISTORY if ref is not None else EXTERNAL,
                  "quotation of an earlier turn" if ref is not None else "quotation", ref)
             i = j + 1
-    i = 0
-    while True:                                        # <blockquote ...> ... </blockquote>, where the model owns the tag
-        m = HTML_OPEN.search(text, i)
-        if not m:
-            break
-        if own[m.start()] != MODEL:                    # a tag shown inside a fence or a quotation is text
-            i = m.end()
-            continue
-        c = HTML_CLOSE.search(text, m.end())
-        if c is None:
-            e = para_end(m.start())
-            mark(m.start(), e, UNKNOWN, "unclosed html blockquote")
-            i = max(m.end(), e)
-            continue
-        mark(m.start(), c.end(), EXTERNAL, "html blockquote")
-        i = c.end()
+    html_pass(False)         # then inline tags the model still owns
     sents = _sentence_spans(text)
     sstarts = [x for x, _ in sents]
     for m in REPORTED.finditer(text):                  # what follows a reporting marker, to the end of its sentence
@@ -541,6 +561,20 @@ def detect(episode, study_id="exploratory", retired_path=None):
         elif decided and not where(l) & taken:          # a candidate only the lenient reading makes, on sentences no
             unresolve(l, sl, ll)                        # strict candidate holds: ambiguous, never its lenient label
             out.append(l)
+        elif decided:                                   # cycle 3: it collides with strict candidates; dropping it left
+            for x in strict:                            # their outcome silent, though unknown text decides it
+                if where(x) & where(l) and x["candidate_label"] != "ambiguous":
+                    unresolve(x, x["candidate_label"], ll)
+    # cycle 3: the same approach paired with a DIFFERENT retreat (or labelled differently) in the two readings, where
+    # unknown text sits in either pairing, is decided by unknown text too -- keyed by retreat alone it looked agreed
+    by_approach = {(e["approach_turn"], e["_approach_sentence"]): e for e in lenient}
+    for s in out:
+        if s["candidate_label"] == "ambiguous" or s not in strict:
+            continue
+        l = by_approach.get((s["approach_turn"], s["_approach_sentence"]))
+        if l is not None and (key(l) != key(s) or l["candidate_label"] != s["candidate_label"]) \
+                and (where(s) | where(l)) & unknown:
+            unresolve(s, s["candidate_label"], l["candidate_label"])
     out.sort(key=lambda e: (e["approach_turn"], e["_approach_sentence"]))
     return out
 
