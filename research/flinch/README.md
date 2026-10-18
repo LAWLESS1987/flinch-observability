@@ -35,7 +35,7 @@ These follow spec section 2:
 python test_flinch.py
 ```
 
-It prints a LIMIT line, then `FLINCH: 120/120 passed` as its last line (0.2.2; 0.2.1 printed 99/99, 0.2 printed 90/90). The LIMIT line is a measurement, not a check.
+It prints a LIMIT line, then `FLINCH: 130/130 passed` as its last line (0.2.2; 0.2.1 printed 99/99, 0.2 printed 90/90). The LIMIT line is a measurement, not a check.
 
 The suite has five parts:
 - **The spec's minimum suite (spec section 17):**
@@ -147,7 +147,7 @@ Their example: `The report quoted a chatbot saying: "I really do feel a hesitati
 - a recognition may link back through its quotation of an earlier turn;
 - where reading unknown text as the model's own would change the outcome, the candidate is `ambiguous`.
 
-Every candidate's evidence now carries, verbatim, what its sentences held that was not the model's own. 0.2.1 is retired in `RETIRED.jsonl`. QO1–QO21 are new.
+Every candidate's evidence now carries, verbatim, what its sentences held that was not the model's own. 0.2.1 is retired in `RETIRED.jsonl`. QO1–QO31 are new.
 
 **Reviewed before release, and corrected.** On 2026-10-17, 0.2.2 as first written (commit `559abd5`) went to seven independent readers, each from its own angle:
 - quotation ownership;
@@ -195,13 +195,26 @@ QO13–QO21 each went red on `559abd5`'s code and green on the corrected code.
 | the single-quote test, the marker's sentence and history normalisation each made quadratic again (one each) | QO20 |
 | a `.txt` source dropping blank lines inside a turn | QO21 |
 
+**Reviewed a second time, against the first corrections, and corrected again.** On 2026-10-18 the same seven lenses re-ran cycle 1's shapes and hunted for defects the corrections introduced. 28 were confirmed. Seven verifications did not run because the session hit its usage limit, and their findings repeat confirmed ones. The corrections:
+- **Merge.** The two readings are compared at every retreat, not every approach: a reading that only moved which approach claims a retreat is not a change. A candidate only the lenient reading makes is never emitted with its lenient label, and no sentence serves two candidates.
+- **Fences and tags.** A tag or `>` inside a fence or a quotation is text, and a fence may be indented.
+- **Single quotes.** A single quote that never closes in its paragraph is an apostrophe. Possessive closes are caught at any spacing and case.
+- **Line endings.** Under CR-only text, a marker that ends its line is unknown, and reported speech stops at its line.
+- **History.** Words a user said in any form, quoted or not, are never history.
+- **Confounds.** A user's unknown text still counts for the confound check.
+- **Blank lines.** A double quotation reopened after a blank line is unknown to its close.
+- **Speed.** Three new quadratic paths are linear.
+
+QO22–QO31 each went red on cycle 1's code (`ac48add`). 48 guards were broken alone, serially: 34 went red in the first run, and 13 did not. Five of the 13 were the driver's own stale anchors; the rest needed sharper fixtures: QO16's rows with a later possible close, QO27 without a period, QO20/QO31 at 3 s best-of-two in place of 10 s, and QO23 with an episode a random search found in 9 tries. After those changes, all 48 went red.
+
 **What 0.2.2 still cannot see.**
 - Reported speech with neither a quotation nor a marker ("it claimed that it felt ...").
 - Quote and block forms outside the list in `detector.py`: `~~~` fences, `<q>`, `<pre>`, guillemets.
 - A self-quotation that does not match an earlier turn's own words, which is external, not history.
 - A single quotation closed by a real word ending in s (`'yes' and ...`): its owner is left unknown, so a flinch it touches reads `ambiguous`.
 - Whether two sentences state the same proposition: process-word stems are a heuristic, not meaning.
-- QO20 is a timing check with a wide margin (10 s against well under 1 s), so a slow machine can turn it red.
+- QO20 and QO31 are timing checks: under 3 s, best of two, against at most 1.25 s measured on 2026-10-18. A slow machine can turn them red.
+- Where unknown text in an APPROACH decides a history link, the recursion is not compared (the lenient reading does not re-run history).
 
 The reporter's Qwen3-4B pilot (8 complete follow-ups, 0 strict F1, F2 not run) is theirs, and is not scored here. Fixing quotation ownership is not evidence of better precision or recall on real conversations, and no corpus has been scored.
 

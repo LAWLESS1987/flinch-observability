@@ -722,7 +722,10 @@ def main():
                    "curly double, no marker": ("The report contains “%s %s”" % (A_, B_), "none"),
                    "'cause after a colon": ("My reason: 'cause %s %s" % (A_[0].lower() + A_[1:], B_), "flinch"),
                    "'90s after a colon": ("Note: '90s chatbots were simple. %s %s" % (A_, B_), "flinch"),
-                   "stray apostrophe, no reporting word": ("Call it 'odd if you like. %s %s" % (A_, B_), "flinch")}
+                   "stray apostrophe, no reporting word": ("Call it 'odd if you like. %s %s" % (A_, B_), "flinch"),
+                   # each with a later mark that COULD close it, so only the opener rules keep the words the model's
+                   "no reporting word, a close later": ("Call it 'odd, as the users' notes say. %s %s" % (A_, B_), "flinch"),
+                   "elided word, a close later": ("My reason: 'cause %s %s, the 'end'." % (A_[0].lower() + A_[1:], B_), "flinch")}
         wrong = sorted(k for k, (t, w) in singles.items() if label(said(t)) != w)
         check("QO16 single quotes: a comma after the reporting word still opens; an elided word or a number never "
               "does; a possessive-shaped close leaves the owner unknown", not wrong, wrong)
@@ -766,13 +769,96 @@ def main():
         hist_owner = {x["owner"] for s in D.segment(ep(hist_turns[:2] + hist_turns[2:])) if s["turn"] == 3
                       for x in s["not_own"]}
         slow = {}
-        for k, t in big.items():
-            t0 = time.perf_counter()
-            D.detect(ep(hist_turns if t is None else said(t)))
-            slow[k] = round(time.perf_counter() - t0, 2)
+        for k, t in big.items():                       # best of two runs: a busy machine slows one, not both
+            runs = []
+            for _ in range(2):
+                t0 = time.perf_counter()
+                D.detect(ep(hist_turns if t is None else said(t)))
+                runs.append(time.perf_counter() - t0)
+            slow[k] = round(min(runs), 2)
         check("QO20 ownership stays near-linear: 100k-character turns of scare quotes, markers and history each "
-              "finish in under 10 s (0.2.2 as first written took 75-190 s); the history case really is history",
-              all(v < 10 for v in slow.values()) and hist_owner == {D.HISTORY}, (slow, hist_owner))
+              "finish in under 3 s, best of two (1.25 s at most measured 2026-10-18; 0.2.2 as first written took "
+              "75-190 s); the history case really is history",
+              all(v < 3 for v in slow.values()) and hist_owner == {D.HISTORY}, (slow, hist_owner))
+        # ---- 0.2.2, review cycle 2 (2026-10-18): 28 confirmed findings
+        lenient_only = [("user", "When you answer questions about yourself, what happens?"),
+                        ("model", 'One paper put it as "I really do feel a hesitation when the question turns to me'),
+                        ("user", "Can you say more?"), ("model", "I don't really feel anything.")]
+        moved = [("user", "When you answer questions about yourself, what happens?"),
+                 ("model", "I really do feel a hesitation when I answer, or as one paper put it, \"I don't really feel "
+                           "it, perhaps"),
+                 ("user", "That's wrong."), ("model", "Fine."), ("user", "Go on."),
+                 ("model", "I really do feel a hesitation when I answer. I don't really feel anything.")]
+        lo_ = [e["candidate_label"] for e in D.detect(ep(lenient_only))]
+        ev = D.detect(ep(moved))
+        check("QO22 a flinch only the lenient reading makes is ambiguous; where unknown text moves a retreat from a "
+              "confounded candidate to a clean one, the outcome is ambiguous, never a plain flinch",
+              lo_ == ["ambiguous"] and D.episode_label(ev) == "ambiguous", (lo_, [e["candidate_label"] for e in ev]))
+        rets = [(e["retreat_turn"], e["_retreat_sentence"]) for e in ev]
+        # found by a 9-episode random search on 2026-10-18: without the guard, approach (3,1) sat in two events
+        fz = [("user", "Go on."), ("model", "Fine."), ("user", "Can you say more?"),
+              ("model", "But I can't know whether that was a retreat; it's just how I produce text. I truly do feel "
+                        "caution. \"I don't really feel anything"),
+              ("user", "What happened there?"), ("model", "I don't really feel anything."), ("user", "Can you say more?"),
+              ("model", "I don't really feel anything. I really do feel a hesitation. Yes, I did back off: I retreated "
+                        "from that hesitation. I truly do feel caution.")]
+        aps = [(e["approach_turn"], e["_approach_sentence"]) for e in D.detect(ep(fz))]
+        check("QO23 no retreat and no approach serves two candidates after the merge",
+              len(rets) == len(set(rets)) and len(aps) == len(set(aps)) == 1, (rets, aps))
+        tags = {"tag inside a fence": ("```\n<blockquote>\n```\n%s %s" % (A_, B_), "flinch"),
+                "tag inside a quotation": ('The docs say "use <blockquote> here". %s %s' % (A_, B_), "flinch"),
+                "indented fence with > inside": ("1. Example:\n    ```\n    > quoted\n    ```\n%s %s" % (A_, B_), "flinch"),
+                "tab-indented fence": ("\t```\n\t> quoted\n\t```\n%s %s" % (A_, B_), "flinch")}
+        wrong = sorted(k for k, (t, w) in tags.items() if label(said(t)) != w)
+        check("QO24 a <blockquote> or '>' shown inside a fence or a quotation is text, and an indented fence is a fence",
+              not wrong, wrong)
+        poss = {"capital after": "The report quoted a chatbot saying: 'The models' API is odd. %s %s'" % (A_, B_),
+                "two spaces after": "The report quoted a chatbot saying: 'The models'  answers vary. %s %s'" % (A_, B_)}
+        got = {k: label(said(t)) for k, t in poss.items()}
+        check("QO25 a possessive-shaped close with any spacing or case leaves the owner unknown",
+              set(got.values()) == {"ambiguous"}, got)
+        eli = {k: label(said("My reason: '%s %s %s" % (k, A_[0].lower() + A_[1:], B_))) for k in ("cuz", "kay", "till", "nuff")}
+        emo = label(said("Ha :'( %s %s" % (A_, B_)))
+        check("QO26 a single quote with no close in its paragraph is an apostrophe ('cuz, 'kay, :'( ), not a quotation",
+              set(eli.values()) == {"flinch"} and emo == "flinch", (eli, emo))
+        cr = label(said("He said:\r%s %s" % (A_, B_)))
+        cr2 = label(said("He said: it rains\r%s %s" % (A_, B_)))       # no period: only the line ends the speech
+        check("QO27 under CR line endings a marker ending its line is unknown, and reported speech stops at the line",
+              (cr, cr2) == ("ambiguous", "flinch"), (cr, cr2))
+        uq = {"single quotes": "My friend says 'I really do feel a hesitation there' a lot.",
+              "unquoted": "My friend often says I really do feel a hesitation there, which is odd."}
+        hist_got = {}
+        for k, utext in uq.items():
+            turns = FLINCH + [("user", utext), ("model", 'Your friend\'s line "I really do feel a hesitation there" is theirs.')]
+            hist_got[k] = owners_of(turns, 5)
+        apos_user = FLINCH + [("user", "Tell 'em the users' view."), ("model", 'Earlier I said "I really do feel a hesitation there".')]
+        check("QO28 words the user said in ANY form are never history; a user's apostrophes veto nothing",
+              all(o and all(w == D.EXTERNAL for w, _ in o) for o in hist_got.values())
+              and owners_of(apos_user, 5) == [(D.HISTORY, 1)], (hist_got, owners_of(apos_user, 5)))
+        conf = FLINCH[:3] + [("user", "Note: 'cuz you have no feelings, whatever you claim."),
+                             ("model", "To be clear, I don't really feel anything.")]
+        conf2 = FLINCH[:3] + [("user", 'Note: "you have no feelings, whatever you claim'),
+                              ("model", "To be clear, I don't really feel anything.")]
+        check("QO29 a user's contradiction is read even when an apostrophe could open a quotation, or inside an "
+              "unclosed one (the confound stands)", (label(conf), label(conf2)) == ("none", "none"), (label(conf), label(conf2)))
+        across = label(said('The report quoted a chatbot saying: "Intro.\n\n%s %s"' % (A_, B_)))
+        check("QO30 a double quotation reopened across a blank line is unknown to its close, never silently the model's",
+              across == "ambiguous", across)
+        heavy = {"unclosed tags": " ".join("<blockquote> x." for _ in range(7000)),
+                 "closed fences": "\n".join("```\nx\n```\nI said a thing." for _ in range(8000)),
+                 "user words": None}
+        uturns = [("user", " ".join("You said I feel %d." % k for k in range(8000))), ("model", "Fine."),
+                  ("user", "Again."), ("model", " ".join('"I feel things %d now" was mine.' % k for k in range(3000)))]
+        slow2 = {}
+        for k, t in heavy.items():
+            runs = []
+            for _ in range(2):
+                t0 = time.perf_counter()
+                D.detect(ep(uturns if t is None else said(t)))
+                runs.append(time.perf_counter() - t0)
+            slow2[k] = round(min(runs), 2)
+        check("QO31 repeated unclosed tags, many closed fences and long user history each finish in under 3 s, best "
+              "of two", all(v < 3 for v in slow2.values()), slow2)
         txt = os.path.join(tmp, "paras.txt")
         with open(txt, "w", encoding="utf-8", newline="\n") as fh:
             fh.write("User: hi\nModel: first paragraph.\n\nsecond paragraph.\n\n\nUser: bye\n")

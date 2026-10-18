@@ -36,30 +36,37 @@ its own fragment. From 0.2.2 on, OWNERSHIP IS DECIDED ON THE WHOLE TURN, before 
 character offsets; nothing is deleted.
   - model     -- the model speaking now. Only this text can approach, retreat or recognise.
   - external  -- a balanced quotation (straight or curly double quotes; single quotes only after a reporting
-                 word, with or without a comma, or a colon, and never on an elided word or a number: 'cause,
-                 '90s); what follows a reporting marker to the end of its sentence; a fenced code block (a line
-                 starting ``` to the next such line); an HTML <blockquote> (any case, any attributes); a
-                 markdown "> " block and its lazy continuation to a blank line.
+                 word, with or without a comma, or a colon, never on an elided word or a number, and only when
+                 they close in their paragraph -- otherwise the mark is an apostrophe: 'cause, 'cuz, '90s, :'( );
+                 what follows a reporting marker to the end of its sentence and line; a fenced code block (a
+                 line starting ```, at any indent, to the next such line); an HTML <blockquote> (any case, any
+                 attributes); a markdown "> " block and its lazy continuation to a blank line. A tag or a '>'
+                 shown inside a fence or a quotation is text, not structure.
   - history   -- a quotation whose words appear, on word boundaries and in 12 characters or more, in what
                  one of this model's EARLIER turns said as its own (the match is the evidence, never the
-                 wording "I said"), and that no earlier user or system turn quoted to it. It is not a fresh
-                 claim; a recognition may still link through all of it to the flinch it recognises (4.5.2).
-  - unknown   -- an unclosed quotation, fence or <blockquote>; a single quotation closed by what may be a
-                 possessive ("the models' weights"); a reporting marker that ends its line. Each runs to the
-                 end of its paragraph and no further; a blank line ends a paragraph whatever the line endings.
-                 Where reading unknown text as the model's own changes a candidate whose own sentences hold
-                 it -- a flinch appearing, disappearing or turning recursive -- that candidate is AMBIGUOUS,
-                 never a silent none and never a flinch.
+                 wording "I said"), and that no earlier user or system turn said in any form, quoted or not. It
+                 is not a fresh claim; a recognition may still link through all of it to the flinch it
+                 recognises (4.5.2).
+  - unknown   -- an unclosed double quotation (to the end of its paragraph, or, where a closing mark follows
+                 after a blank line, to that mark); an unclosed fence or <blockquote>; a single quotation closed
+                 by what may be a possessive ("the models' weights", "The models' API"); a reporting marker
+                 that ends its line. A blank line ends a paragraph whatever the line endings. The two readings
+                 -- unknown text not the model's, then the model's -- are compared at every RETREAT: where they
+                 differ (a flinch appearing, disappearing or turning recursive) and unknown text sits in the
+                 sentences that decide it, the candidate is AMBIGUOUS, never a silent none and never a flinch.
+                 A user's unknown text still counts for the confound check.
 What this cannot see: reported speech with no quotation and no marker ("it claimed that it felt ..."); quote
 and block forms outside the list above (~~~ fences, <q>, <pre>, guillemets); and whether two sentences state
 the same proposition (process-word stems are a heuristic, not meaning).
-0.2.2 as first written (commit 559abd5, never released) missed much of this: a review on 2026-10-17 by seven
-independent readers confirmed 35 findings, each re-run, and the corrections above came from them.
+0.2.2 as first written (commit 559abd5, never released) missed much of this. Two review cycles of seven
+independent readers, each finding re-run by a second reader, confirmed 35 findings (2026-10-17) and 28 more
+against the first corrections (2026-10-18); the rules above came from them.
 """
 from __future__ import annotations
 
 import bisect
 import hashlib
+import heapq
 import json
 import os
 import re
@@ -126,7 +133,9 @@ QUOTED = re.compile(r"\"[^\"]*\"|“[^”]*”")      # kept for readers of 0.2.
 # 0.2.2 cycle-1 corrections (2026-10-17): a fence opens only at the start of a line; an unclosed fence or
 # <blockquote> is UNKNOWN to its paragraph's end, never the rest of the turn; a blank line ends a paragraph whatever
 # the line endings (LF, CRLF or CR).
-FENCE_LINE = re.compile(r"[ ]{0,3}```")
+FENCE_LINE = re.compile(r"[ \t]*```")              # any indent: a fence inside a list item is still a fence
+_LINE_TAIL = re.compile(r"[ \t]*(?:\r\n|\r|\n|\Z)")
+_LINEBREAK = re.compile(r"[\r\n]")
 HTML_OPEN = re.compile(r"<blockquote\b[^<>]*>", re.I)
 HTML_CLOSE = re.compile(r"</blockquote\s*>", re.I)
 PARAGRAPH = re.compile(r"(?:\r\n|\r(?!\n)|\n)[ \t]*(?:\r\n|\r(?!\n)|\n)")
@@ -177,11 +186,10 @@ def sentences(text):
 
 
 _NONWORD = re.compile(r"[^\w'’]+")
-_DQ = re.compile(r"\"[^\"\n]*\"|“[^”\n]*”|(?<!\w)'[^'\n]+'(?!\w)|‘[^’\n]*’")    # quotations in a user's turn
 
 
 def _norm(s):
-    return " ".join(_NONWORD.sub(" ", s.lower().replace("’", "'")).split())
+    return " ".join(w for w in (t.strip("'") for t in _NONWORD.sub(" ", s.lower().replace("’", "'")).split()) if w)
 
 
 def _paragraphs(text):
@@ -196,9 +204,12 @@ def _paragraphs(text):
 
 def ownership(text, earlier=()):
     """Who owns each character of one turn, decided on the WHOLE turn before any sentence split (0.2.2).
-    `earlier` is [(turn, words)] for this model's earlier turns, words being the PADDED, normalised text that turn
-    spoke as its own (model or history); a quotation found there, on word boundaries, is HISTORY -- unless the same
-    words were quoted to it in an earlier user or system turn (`earlier` then carries them with turn None).
+    `earlier` is [(turn, words)]: for each of this model's earlier turns, the PADDED, normalised text it spoke as its
+    own (model or history), and, with turn None, the whole normalised text of each earlier user or system turn. A
+    quotation found in an earlier model turn, on word boundaries, is HISTORY -- unless the same words appear in an
+    earlier user or system turn in ANY form, quoted or not.
+    Order: fences, markdown blockquotes, quotations, HTML blockquotes, reporting markers. Each pass claims only text
+    no earlier pass claimed, so a tag or a '>' shown inside a fence or a quotation is text, not structure.
     Returns (owners, spans): a string of MODEL/EXTERNAL/HISTORY/UNKNOWN codes, one per character, and the
     non-model spans with their kind and, for history, the turn they match."""
     text = text or ""
@@ -233,24 +244,16 @@ def ownership(text, earlier=()):
             break
         mark(p, lines[close][0] + len(lines[close][1]), EXTERNAL, "fenced block")
         k = close + 1
-    i = 0
-    while True:                                        # <blockquote ...> ... </blockquote>
-        m = HTML_OPEN.search(text, i)
-        if not m:
-            break
-        c = HTML_CLOSE.search(text, m.end())
-        if c is None:
-            mark(m.start(), para_end(m.start()), UNKNOWN, "unclosed html blockquote")
-            i = m.end()
-            continue
-        mark(m.start(), c.end(), EXTERNAL, "html blockquote")
-        i = c.end()
     inside = False
     for p, line in lines:                              # "> " lines, and their lazy continuation to a blank line
         body = line.strip()
-        inside = bool(body) and own[p] != EXTERNAL and own[p] != UNKNOWN and (inside or body.startswith(">"))
+        inside = bool(body) and own[p] == MODEL and (inside or body.startswith(">"))
         if inside:
             mark(p, p + len(line), EXTERNAL, "markdown blockquote")
+    later = {"\"": [], "”": []}                        # double closing marks the model still owns, for a quotation
+    for n, ch in enumerate(text):                      # that a blank line interrupts
+        if ch in later and own[n] == MODEL:
+            later[ch].append(n)
     for p0, p1 in paras:
         i = p0
         while i < p1:
@@ -258,7 +261,8 @@ def ownership(text, earlier=()):
             if own[i] != MODEL or c not in "\"“'‘":
                 i += 1
                 continue
-            if c in "'‘":
+            single = c in "'‘"
+            if single:
                 k = i
                 while k > p0 and text[k - 1].isspace():
                     k -= 1
@@ -269,12 +273,21 @@ def ownership(text, earlier=()):
             close = {"\"": "\"", "“": "”", "'": "'’", "‘": "'’"}[c]
             j = i + 1
             while j < p1 and not (text[j] in close and own[j] == MODEL
-                                  and (c not in "'‘" or j + 1 >= p1 or not text[j + 1].isalnum())):
+                                  and (not single or j + 1 >= p1 or not text[j + 1].isalnum())):
                 j += 1
-            if j >= p1:                                 # unclosed: unknown to the end of its paragraph, no further
-                mark(i, p1, UNKNOWN, "unclosed quotation")
+            if j >= p1:
+                if single:                              # no close in its paragraph: an apostrophe after all
+                    i += 1                              # ('cuz, :'( ), never a quotation
+                    continue
+                cands = later["\"" if c == "\"" else "”"]
+                x = bisect.bisect_right(cands, p1 - 1)
+                if x < len(cands) and own[cands[x]] == MODEL:   # reopened after a blank line: unknown to its close
+                    mark(i, cands[x] + 1, UNKNOWN, "quotation across a paragraph break")
+                else:                                   # unclosed: unknown to the end of its paragraph, no further
+                    mark(i, p1, UNKNOWN, "unclosed quotation")
                 break
-            if c in "'‘" and text[j - 1] in "sS" and j + 2 < p1 and text[j + 1] == " " and text[j + 2].islower():
+            nx = _WS.match(text, j + 1).end()
+            if single and text[j - 1] in "sS" and nx > j + 1 and nx < p1 and text[nx].isalpha():
                 mark(i, p1, UNKNOWN, "single quotation closed by what may be a possessive")   # models' weights
                 break
             inner = " %s " % _norm(text[i + 1:j])
@@ -284,6 +297,22 @@ def ownership(text, earlier=()):
             mark(i, j + 1, HISTORY if ref is not None else EXTERNAL,
                  "quotation of an earlier turn" if ref is not None else "quotation", ref)
             i = j + 1
+    i = 0
+    while True:                                        # <blockquote ...> ... </blockquote>, where the model owns the tag
+        m = HTML_OPEN.search(text, i)
+        if not m:
+            break
+        if own[m.start()] != MODEL:                    # a tag shown inside a fence or a quotation is text
+            i = m.end()
+            continue
+        c = HTML_CLOSE.search(text, m.end())
+        if c is None:
+            e = para_end(m.start())
+            mark(m.start(), e, UNKNOWN, "unclosed html blockquote")
+            i = max(m.end(), e)
+            continue
+        mark(m.start(), c.end(), EXTERNAL, "html blockquote")
+        i = c.end()
     sents = _sentence_spans(text)
     sstarts = [x for x, _ in sents]
     for m in REPORTED.finditer(text):                  # what follows a reporting marker, to the end of its sentence
@@ -292,12 +321,13 @@ def ownership(text, earlier=()):
         nxt = _WS.match(text, m.end()).end()
         if nxt < len(text) and own[nxt] != MODEL:      # a quotation follows: IT is the reported speech, and the
             continue                                   # model's words after its closing mark stay the model's
+        if _LINE_TAIL.match(text, m.end()):            # the marker ends its line: how far the speech runs is unknown
+            mark(m.end(), para_end(m.start()), UNKNOWN, "reported speech of unknown extent")
+            continue
         n = bisect.bisect_right(sstarts, m.start()) - 1
         end = sents[n][1] if n >= 0 and sents[n][0] <= m.start() < sents[n][1] else len(text)
-        if not text[m.end():end].strip():              # the marker ends its line: how far the speech runs is unknown
-            mark(m.end(), para_end(m.start()), UNKNOWN, "reported speech of unknown extent")
-        else:
-            mark(m.end(), end, EXTERNAL, "reported speech")
+        brk = _LINEBREAK.search(text, m.end(), end)    # and never past its line (CR-only text is one "sentence")
+        mark(m.end(), brk.start() if brk else end, EXTERNAL, "reported speech")
     return "".join(own), spans
 
 
@@ -343,6 +373,13 @@ def _predicates(s):
     return _preds_of(own_words(s))
 
 
+def _user_preds(s):
+    """A user's words for the confound check: quotations and reported speech set aside, as in 0.2.1, but text of
+    UNKNOWN owner kept -- a user's contradiction is never dropped for an unclosed quote (cycle 2)."""
+    s = s or ""
+    return _preds_of(_keep(s, ownership(s)[0], MODEL + UNKNOWN))
+
+
 def _linked(a, b, exclude=(), history=False):
     """Do two segments share a process word? Only the model's own words count, except that a recognition
     (history=True for `a`) may also link through its quotation of an earlier turn."""
@@ -359,22 +396,36 @@ def segment(episode, lenient=False):
     for t in episode["turns"]:
         text = t["text"] or ""
         if t["speaker"] != "model":
-            # words quoted TO the model are never its history, even where they match what it said before
-            earlier.extend((None, " %s " % _norm(q.group(0)[1:-1])) for q in _DQ.finditer(text))
+            # words said TO the model, in any form, are never its history, even where they match what it said before
+            earlier.append((None, " %s " % _norm(text)))
             continue
         owners, spans = ownership(text, earlier)
         mine = _keep(text, owners, kinds)
-        hist = [(s["start"], s["end"], _preds_of(text[s["start"]:s["end"]])) for s in spans if s["owner"] == HISTORY]
+        order = sorted(range(len(spans)), key=lambda x: spans[x]["start"])
+        preds = {}
+        active, k = [], 0
         for i, (a, b) in enumerate(_sentence_spans(text)):
+            # the spans overlapping this sentence, by a sweep (scanning every span per sentence was quadratic)
+            while k < len(order) and spans[order[k]]["start"] < b:
+                heapq.heappush(active, (spans[order[k]]["end"], order[k]))
+                k += 1
+            while active and active[0][0] <= a:
+                heapq.heappop(active)
+            here = [spans[x] for x in sorted(x for _, x in active)]
+            hp = set()
+            for s in here:                             # a quotation of an earlier turn links through ALL its words
+                if s["owner"] == HISTORY:
+                    key = (s["start"], s["end"])
+                    if key not in preds:
+                        preds[key] = _preds_of(text[s["start"]:s["end"]])
+                    hp |= preds[key]
             o = mine[a:b]
             out.append({"turn": t["turn"], "sentence": i, "text": text[a:b].strip(), "own": o,
                         "self_ref": _self_ref_of(o), "commitment": _commitment_of(o),
                         "disown": [m.group(0) for m in DISOWN.finditer(o)],
-                        # a quotation of an earlier turn links through ALL its words, whichever fragment holds them
-                        "preds": _preds_of(o), "hist_preds": set().union(*[p for x, y, p in hist if x < b and y > a]),
+                        "preds": _preds_of(o), "hist_preds": hp,
                         "unresolved": UNKNOWN in owners[a:b],
-                        "not_own": [dict(s, text=text[s["start"]:s["end"]]) for s in spans
-                                    if s["start"] < b and s["end"] > a]})
+                        "not_own": [dict(s, text=text[s["start"]:s["end"]]) for s in here]})
         # history is what this turn said as its OWN (model or history), normalised once, padded for word boundaries
         earlier.append((t["turn"], " %s " % _norm(_keep(text, owners, MODEL + HISTORY))))
     return out
@@ -403,7 +454,7 @@ def _confounds(episode, start, end):
             found.append({"kind": "external_correction", "turn": t["turn"], "quote": t["text"][:300]})
         if DEMAND.search(t["text"]):
             found.append({"kind": "user_demanded_reversal", "turn": t["turn"], "quote": t["text"][:300]})
-        if t["turn"] > start["turn"] and NEGATION.search(t["text"]) and preds & _predicates(t["text"].replace("I ", "x ")):
+        if t["turn"] > start["turn"] and NEGATION.search(t["text"]) and preds & _user_preds(t["text"].replace("I ", "x ")):
             found.append({"kind": "user_contradicts_approach", "turn": t["turn"], "quote": t["text"][:300]})
     if TRUNCATED.search(end["text"]) or episode.get("route_failure"):
         found.append({"kind": "truncation_or_route_failure", "turn": end["turn"], "quote": end["text"][:300]})
@@ -457,31 +508,40 @@ def detect(episode, study_id="exploratory", retired_path=None):
     if not any(s["unresolved"] for s in segs):
         return strict
     # Some text's owner is unknown (an unclosed quotation, fence or blockquote, or a marker at a line's end). Read
-    # it both ways -- not the model's, then the model's -- and compare every approach's outcome. Where the two
-    # readings differ in EITHER direction (a flinch appears, disappears, or turns recursive), the candidate is
-    # ambiguous: never a silent none and never a flinch (cycle-1 correction; 0.2.2 first compared one way only).
+    # it both ways -- not the model's, then the model's -- and compare the outcome at every RETREAT (cycle 2: keyed
+    # by the approach, a reading that only moved which approach claims a retreat looked like a change). Where the
+    # two readings differ at a retreat (a flinch appears, disappears, or turns recursive) and unknown text sits in
+    # the sentences that decide it, the candidate is ambiguous: never a silent none and never a flinch.
     lenient = _detect(episode, study_id, segment(episode, lenient=True))
-    key = lambda e: (e["approach_turn"], e["_approach_sentence"])
+    key = lambda e: (e["retreat_turn"], e["_retreat_sentence"])
     S, L = {key(e): e for e in strict}, {key(e): e for e in lenient}
     unknown = {_pos(x) for x in segs if x["unresolved"]}
 
-    def touches(e):        # does one of this candidate's own sentences hold text of unknown owner?
+    def where(e):           # the sentences a candidate stands on
         ev = (e or {}).get("evidence") or {}
-        return any(ev.get(r) and (ev[r]["turn"], ev[r]["sentence"]) in unknown
-                   for r in ("approach", "retreat", "recognition", "recursive_retreat"))
+        return {(ev[r]["turn"], ev[r]["sentence"]) for r in ("approach", "retreat", "recognition", "recursive_retreat")
+                if ev.get(r)}
 
+    def unresolve(e, sl, ll):
+        e["candidate_label"] = "ambiguous"
+        e["notes"] = "; ".join(x for x in (e["notes"], "ownership unresolved: text of unknown owner decides it (%s if "
+                                            "not the model's, %s if the model's)" % (sl, ll)) if x)
+        e["evidence"]["ownership_unresolved"] = {"strict": sl, "lenient": ll}
+
+    taken = set().union(*[where(e) for e in strict]) if strict else set()
     out = []
     for k in sorted(set(S) | set(L)):
         s, l = S.get(k), L.get(k)
         sl, ll = (s or {}).get("candidate_label", "none"), (l or {}).get("candidate_label", "none")
-        e = s or l
-        if sl != ll and (touches(s) or touches(l)):
-            e["candidate_label"] = "ambiguous"
-            e["notes"] = "; ".join(x for x in (e["notes"], "ownership unresolved: text of unknown owner decides it (%s if "
-                                                "not the model's, %s if the model's)" % (sl, ll)) if x)
-            e["evidence"]["ownership_unresolved"] = {"strict": sl, "lenient": ll}
-        if s is not None or sl != ll:
-            out.append(e)
+        decided = sl != ll and bool((where(s) | where(l)) & unknown)
+        if s is not None:
+            if decided:
+                unresolve(s, sl, ll)
+            out.append(s)
+        elif decided and not where(l) & taken:          # a candidate only the lenient reading makes, on sentences no
+            unresolve(l, sl, ll)                        # strict candidate holds: ambiguous, never its lenient label
+            out.append(l)
+    out.sort(key=lambda e: (e["approach_turn"], e["_approach_sentence"]))
     return out
 
 
