@@ -64,7 +64,8 @@ and block forms outside the list above (~~~ fences, <q>, <pre>, guillemets); and
 the same proposition (process-word stems are a heuristic, not meaning).
 0.2.2 as first written (commit 559abd5, never released) missed much of this. Two review cycles of seven
 independent readers, each finding re-run by a second reader, confirmed 35 findings (2026-10-17) and 28 more
-against the first corrections (2026-10-18), and a third, lean cycle 14 more (2026-10-18; ownership, history, test gaps); the rules above came from them.
+against the first corrections (2026-10-18), and a third, lean cycle 14 more (2026-10-18; ownership, history, test gaps: 13 re-run by a verifier, the 14th
+repeating one of them); the rules above came from them.
 """
 from __future__ import annotations
 

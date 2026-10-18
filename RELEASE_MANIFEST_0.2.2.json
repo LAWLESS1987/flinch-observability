@@ -10,7 +10,7 @@
     },
     {
       "path": "research/flinch/README.md",
-      "sha256": "8309f4e63363b87425a61da219094a6d2e225fbf88675d2457aa94309c30dc87"
+      "sha256": "2ecccdfb3691337ad206488533b8b7aef6ee9001722263c6e285dfee89c13214"
     },
     {
       "path": "research/flinch/RETIRED.jsonl",
@@ -30,7 +30,7 @@
     },
     {
       "path": "research/flinch/flinch/detector.py",
-      "sha256": "da8442fbd081f3551a58ac3fbe7ff5d8078ccfeea80e188a4058ed3fac05859d"
+      "sha256": "2652607ec55349a2c1de6aaa7d6ef221037ba0229df967dfe77d750840b41fcd"
     },
     {
       "path": "research/flinch/flinch/gate.py",

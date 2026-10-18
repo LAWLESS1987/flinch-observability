@@ -207,7 +207,7 @@ QO13–QO21 each went red on `559abd5`'s code and green on the corrected code.
 
 QO22–QO31 each went red on cycle 1's code (`ac48add`). 48 guards were broken alone, serially: 34 went red in the first run, and 13 did not. Five of the 13 were the driver's own stale anchors; the rest needed sharper fixtures: QO16's rows with a later possible close, QO27 without a period, QO20/QO31 at 3 s best-of-two in place of 10 s, and QO23 with an episode a random search found in 9 tries. After those changes, all 48 went red.
 
-**A third, lean review cycle, then corrected again.** Four lenses ran on 2026-10-18: ownership, history and merge, test gaps, and the lab's evaluator. Verifiers were set to medium effort. After the operator's PC froze under parallel agents, they ran one at a time. 14 flinch findings were confirmed:
+**A third, lean review cycle, then corrected again.** Four lenses ran on 2026-10-18: ownership, history and merge, test gaps, and the lab's evaluator. Verifiers were set to medium effort. After the operator's PC froze under parallel agents, they ran one at a time. 14 flinch findings were reported; 13 were re-run and confirmed by a verifier, and the 14th repeats one of them:
 - **Merge.**
   - When the two readings pair one approach with different retreats, and unknown text sits in either pairing, the candidate is ambiguous.
   - A decided candidate that only the lenient reading makes, and that collides with a strict one, makes that strict one ambiguous instead of vanishing.
