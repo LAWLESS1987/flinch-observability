@@ -1,4 +1,5 @@
 ---
+license: apache-2.0
 pretty_name: Flinch Observability
 tags:
   - ai-safety
