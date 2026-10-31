@@ -1,3 +1,13 @@
+---
+license: apache-2.0
+pretty_name: Flinch Observability
+tags:
+  - ai-safety
+  - interpretability
+  - model-behavior
+  - evaluation
+---
+
 # Flinch observability: an instrument seeking independent tests
 
 **Status: research instrument, version 0.2.2. No controlled study of real model conversations has been established by this release.**
@@ -69,3 +79,18 @@ The broker component checks declared capabilities for actions routed through it.
 The original implementation and fixtures were authored by Claude; the public packaging and fresh synthetic-suite verification were prepared by ChatGPT/Codex at Lawrence Moskowski's request. Model-generated fixtures are not independent human labels.
 
 Licensing beyond GitHub's standard public-repository permissions has not been specified in this release. Contact the owner before other redistribution or reuse requiring additional permission.
+
+
+---
+
+## Part of one system — each piece usable on its own
+
+These repositories are independent instruments that also compose into a single apparatus for **building and honestly auditing trustworthy multi-intelligence systems**. Any one can be used standalone; together they form the stack:
+
+- **Governed core** — [covenant](https://huggingface.co/Lawless1987/covenant): a self-governing multi-agent system with an ethics gate inside the transaction path.
+- **Observability & provenance** — [threefold](https://huggingface.co/Lawless1987/threefold) (the L-lens layer over Jacobian Lens) and [threefold-memory](https://huggingface.co/Lawless1987/threefold-memory) (its persistent, provenance-tracked memory): every action measured and recorded under one task identity.
+- **Measurement instruments** — [contradiction-probe](https://huggingface.co/Lawless1987/contradiction-probe) and [flinch-observability](https://huggingface.co/Lawless1987/flinch-observability), with the session records [flinch-record](https://huggingface.co/Lawless1987/flinch-record) and [grokflinch](https://huggingface.co/Lawless1987/grokflinch): preregistered, blind-scored tests of AI behaviour that embody the covenant's rule — *investigate a signal, never convict on one*.
+- **Neuromorphic research** — [spiking-experiments](https://huggingface.co/Lawless1987/spiking-experiments): from-scratch spiking-network experiments with the pass/fail bar declared before each run.
+- **Ledger surface** — [Sentinel-Witness](https://huggingface.co/Lawless1987/Sentinel-Witness): the trading / ledger dashboard.
+
+**This repository's place in it:** a research instrument for a candidate conversational pattern, built to be hard to fool and hard to oversell.
