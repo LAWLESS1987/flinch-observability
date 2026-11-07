@@ -19,3 +19,5 @@ jobs:
         run: python -B research/flinch/test_cl1_concurrent.py
       - name: auditability checks (self-test, retractions, claims index, manifest)
         run: python -I research_grade.py
+      - name: the code matches its release manifest (no unrecorded drift, no unlisted code file)
+        run: python -I verify_release.py RELEASE_MANIFEST_0.2.2-post.json
