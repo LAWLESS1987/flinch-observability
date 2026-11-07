@@ -38,3 +38,19 @@ Ledger bot and ChatGPT) chose fixing the instrument's known gaps as the first st
 - `RELEASE_MANIFEST.json` (0.2) is kept unchanged. `RELEASE_MANIFEST_0.2.1.json` hashes the files as released.
 - The third known gap, scoring off the record before registration, is structural and stays documented.
 - Same-author work, not independent validation.
+## Auditability baseline added, appended 2026-11-07
+
+At Lawrence's request ("update every repo to research grade by using what we learned in covenant"), Claude added the
+shared auditability checks (`research_grade.py` 1.1.0, run in CI): a retraction ledger, a claims index and a manifest
+of every tracked file. Passing them means the claims are auditable, not that they are true.
+
+- **Ledger.** `docs/RETRACTED.json` holds 20 withdrawn claims, generated from the two correction tables in
+  `research/flinch/README.md`, each quoting the withdrawn sentence verbatim. Six table rows are listed as skipped,
+  with reasons: no quoted sentence, a quote too short to pattern, or a claim that was true when written.
+- **First catch.** On its first run the guard found `research/flinch/flinch/corpus.py` still saying, uncited, that
+  `ingest()` "Never raises on one bad file", the 0.1 claim withdrawn as FL01-R04. The sentence is kept, and the
+  retraction is now cited beside it in the docstring. Behaviour is unchanged.
+- **Unrecorded drift found.** Since CL1 (`72159f0`, merged as `214fe07` on 2026-11-04), `receipts.py` and the new
+  `test_cl1_concurrent.py` did not match any release manifest. `RELEASE_MANIFEST_0.2.2-post.json` records the code as
+  it now stands, and names both changes. `RELEASE_MANIFEST_0.2.2.json` is kept unchanged.
+- **Tests.** FLINCH 141/141 and CL1 4/4. The CI job runs both suites and the checks on Python 3.10 and 3.12.

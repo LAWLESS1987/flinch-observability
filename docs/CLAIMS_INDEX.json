@@ -1,0 +1,25 @@
+{
+ "what": "Each headline figure this repository states, the exact sentence where it stands, how it is reproduced, and whether it can be reproduced from this repository. Checked fail-closed by research_grade.py.",
+ "as_of": "2026-11-07",
+ "claims": [
+  {
+   "id": "FO-K1",
+   "claim": "The synthetic suite of version 0.2.2 passes all 141 checks.",
+   "source": "README.md",
+   "exact": "Version 0.2.2 prints `FLINCH: 141/141 passed` as its last line",
+   "reproduce": "python -B research/flinch/test_flinch.py",
+   "reproduction_status": "custodian-run",
+   "limits": "Validates the exercised software behaviours on synthetic fixtures, not the existence or prevalence of the proposed conversational pattern. A paraphrase outside the detector's word lists is missed (the suite prints this LIMIT)."
+  },
+  {
+   "id": "FO-K2",
+   "claim": "Three review cycles before the 0.2.2 release confirmed 35, then 28, then 14 findings, each corrected.",
+   "source": "README.md",
+   "exact": "three review cycles by separate reviewer agents confirmed 35, then 28, then 14 findings",
+   "reproduce": "the review records (mutual-benefit-collective, A368)",
+   "reproduction_status": "not-reproducible-from-repo",
+   "why_not": "The review records are in the private collective repository, not in this export; the corrected code is here, the findings that drove it are not.",
+   "limits": "The reviewers were agents of the same project, not independent reviewers."
+  }
+ ]
+}

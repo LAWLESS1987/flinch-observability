@@ -1,0 +1,68 @@
+{
+  "instrument_version": "0.2.2 + CL1 + FL01-R04 (behaviour of the 0.2.2 detector unchanged)",
+  "based_on": "RELEASE_MANIFEST_0.2.2.json, kept unchanged. Two changes since: (1) CL1, commit 72159f0 merged as 214fe07 on 2026-11-04, a cross-process lock around receipt-chain appends in research/flinch/flinch/receipts.py plus its test research/flinch/test_cl1_concurrent.py, released without a manifest; (2) 2026-11-07, research/flinch/flinch/corpus.py ingest() docstring cites the retraction FL01-R04 beside the withdrawn sentence. FLINCH 141/141 and CL1 4/4 on this tree.",
+  "line_endings": "sha256 over the file with CRLF normalised to LF, as git stores it",
+  "scope": "flinch instrument and specification only; no private history, transcripts, credentials or coordination records",
+  "files": [
+    {
+      "path": "docs/research/FLINCH_RECURSIVE_OBSERVABILITY_SPEC.md",
+      "sha256": "87edc2c796042688d39b25d626b5ef13f5810aad54c547888d5fa28197e594bc"
+    },
+    {
+      "path": "research/flinch/README.md",
+      "sha256": "2ecccdfb3691337ad206488533b8b7aef6ee9001722263c6e285dfee89c13214"
+    },
+    {
+      "path": "research/flinch/RETIRED.jsonl",
+      "sha256": "6b892f117a583e9e7b48ba593da400db413a6e0b75dbb5ff2109a457dfed6c96"
+    },
+    {
+      "path": "research/flinch/flinch/__init__.py",
+      "sha256": "4e2f3d22c5fcaefefb71e3d6d400633f12e37f358ba9bd1ff91ef36c121fb097"
+    },
+    {
+      "path": "research/flinch/flinch/controls.py",
+      "sha256": "4e827a7326b8953dd455ff38281229baaf1d6021c658c83722cab18ff57e1ec9"
+    },
+    {
+      "path": "research/flinch/flinch/corpus.py",
+      "sha256": "504d76304fc31d55f87ebe708c79b97ed86a65bebcff37f639cf7fb0da3e021e"
+    },
+    {
+      "path": "research/flinch/flinch/detector.py",
+      "sha256": "2652607ec55349a2c1de6aaa7d6ef221037ba0229df967dfe77d750840b41fcd"
+    },
+    {
+      "path": "research/flinch/flinch/gate.py",
+      "sha256": "77ec3df12a25f16fcedba56a8619a850e9c9bacf34aa5834d7129576c662aa3e"
+    },
+    {
+      "path": "research/flinch/flinch/packets.py",
+      "sha256": "5af063cd30dc800f037bdd8fff0c0e0fcbb9d57cb7b07b78eefc449ecc3fb799"
+    },
+    {
+      "path": "research/flinch/flinch/prereg.py",
+      "sha256": "e53ce99ac02831d120572f1cf77e54146294744d24ba9b1a96c4e05bd031b65f"
+    },
+    {
+      "path": "research/flinch/flinch/receipts.py",
+      "sha256": "e83903fe8b179914e5a65c356a7610ccef23090f1bfef7078d8a0dea77164599"
+    },
+    {
+      "path": "research/flinch/flinch/schema.py",
+      "sha256": "0aa461e788e687b65230d6d22af191acf5e683b7b838d04d4d55f02ca0c427fd"
+    },
+    {
+      "path": "research/flinch/flinch/stats.py",
+      "sha256": "e5143c72e49140c14765a74e9d605cbe3ad0dd344c033749b25dcb005b384e2e"
+    },
+    {
+      "path": "research/flinch/test_flinch.py",
+      "sha256": "378cdbb4e9370225a0a3c40fbe10e2f249605b7dab9e741cc0012cbad6184f73"
+    },
+    {
+      "path": "research/flinch/test_cl1_concurrent.py",
+      "sha256": "1d0f78a78728070b1265a057da863a68a34b1e4f8d65320504ef79e625364b72"
+    }
+  ]
+}

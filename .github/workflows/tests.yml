@@ -1,0 +1,19 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: flinch synthetic suite
+        run: python -B research/flinch/test_flinch.py
+      - name: receipt-chain concurrency (CL1)
+        run: python -B research/flinch/test_cl1_concurrent.py
+      - name: auditability checks (self-test, retractions, claims index, manifest)
+        run: python -I research_grade.py
