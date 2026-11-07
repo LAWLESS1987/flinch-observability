@@ -33,7 +33,8 @@ Version 0.2.2 prints `FLINCH: 141/141 passed` as its last line (0.2.1 printed 99
 - [Retired detector record](research/flinch/RETIRED.jsonl)
 - [How to contribute evidence](REPRODUCING.md)
 - [Publication and provenance record](PUBLICATION_RECORD.md)
-- [Source-file hashes](RELEASE_MANIFEST_0.2.2.json) (earlier: [0.2.1](RELEASE_MANIFEST_0.2.1.json), [0.2](RELEASE_MANIFEST.json))
+- [Source-file hashes](RELEASE_MANIFEST_0.2.2-post.json), the code as it stands: 0.2.2 plus the CL1 lock and one docstring correction (earlier: [0.2.2 as released](RELEASE_MANIFEST_0.2.2.json), [0.2.1](RELEASE_MANIFEST_0.2.1.json), [0.2](RELEASE_MANIFEST.json))
+- Auditability checks: `python -I research_grade.py` runs a self-test, the retraction ledger ([`docs/RETRACTED.json`](docs/RETRACTED.json), from the correction tables), the claims index ([`docs/CLAIMS_INDEX.json`](docs/CLAIMS_INDEX.json)) and `MANIFEST.sha256` over every tracked file. Passing means the claims are auditable, not that they are true.
 
 ## What is already built
 

@@ -68,7 +68,11 @@ PARSERS = {".txt": _parse_txt, ".jsonl": _parse_jsonl, ".json": _parse_json}
 
 
 def ingest(paths, store=None):
-    """Returns {"episodes", "missing", "duplicates", "sources"}. Never raises on one bad file."""
+    """Returns {"episodes", "missing", "duplicates", "sources"}. Never raises on one bad file.
+
+    As a universal claim the sentence above is withdrawn (FL01-R04, docs/RETRACTED.json): each file's failure is
+    recorded as MISSING with its reason on the shapes check CO2 drives, which is measured, not proven for every input.
+    """
     out = {"episodes": [], "missing": [], "duplicates": [], "sources": []}
     seen = {}
     for p in paths:

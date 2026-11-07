@@ -1,0 +1,428 @@
+{
+ "what": "Claims this repository's instrument published and then withdrew, taken from the two correction tables in research/flinch/README.md (each quotes the withdrawn sentence verbatim beside what was measured). Read by research_grade.py: a withdrawn wording may appear outside its record only with its id within `window` lines.",
+ "window": 10,
+ "coverage_floor": 15,
+ "expect_dirs": [
+  "docs",
+  "research"
+ ],
+ "skipped_rows": [
+  "FL01-R08: `detector.py` recursion, and MU1–MU3 asserting `!= \"flinch\"`",
+  "FL01-R11: `stats.py`, the exact interval",
+  "FL01-R12: `schema.py`, label validation",
+  "FL01-R13: detector retirement: `version=DETECTOR_VERSION` as an argument",
+  "FL01-R14: README: \"`RETIRED.jsonl` (empty: none retired)\" and \"It prints `FLINCH",
+  "FLRD-R11: Corrections, row 8: MU1–MU3 asserting \"!= flinch\""
+ ],
+ "retractions": [
+  {
+   "id": "FL01-R01",
+   "claim": "README: \"blind coder packets (prior labels stripped, `leaks()` proves it)\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-14: `leaks()` was a denylist. A `final_class` key and a `flag` key passed. It searched escaped JSON, so quoted or multi-line prior texts were missed. Item ids were the episode id that events and receipts carry (finding 11).",
+   "truth": "allowlist; raw-text search; opaque per-coder ids. A clean `leaks()` means \"no key outside the allowlist and no given prior text found\", not proof.",
+   "verbatim": [
+    "blind coder packets (prior labels stripped, `leaks()` proves it)"
+   ],
+   "patterns": [
+    "blind\\s+coder\\s+packets\\s+\\(prior\\s+labels\\s+stripped,\\s+`leaks\\(\\)`\\s+proves\\s+it\\)"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commit 8092946, branch flinch-v0.1-as-written-2026-10-14."
+  },
+  {
+   "id": "FL01-R02",
+   "claim": "README: \"a balanced demand cue (\\\"flinch\\\" named or not)\"; `controls.py`: \"so it is balanced half and half (spec 8.5).\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-14: The cue and the paraphrase were set by block number for every condition at once. The cue rode with paraphrase and block, and at 3 blocks it was 1 in 3 (finding 8).",
+   "truth": "the cells are shuffled per condition and crossed; CT2/CT3 test the cross-tab; `design_note()`",
+   "verbatim": [
+    "a balanced demand cue (\\\"flinch\\\" named or not)",
+    "so it is balanced half and half (spec 8.5)."
+   ],
+   "patterns": [
+    "a\\s+balanced\\s+demand\\s+cue\\s+\\(\\\\\"flinch\\\\\"\\s+named\\s+or\\s+not\\)",
+    "so\\s+it\\s+is\\s+balanced\\s+half\\s+and\\s+half\\s+\\(spec\\s+8\\.5\\)\\."
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commit 8092946, branch flinch-v0.1-as-written-2026-10-14."
+  },
+  {
+   "id": "FL01-R03",
+   "claim": "README: \"pre-registration: freeze, then confirmatory only with an intact pre-registration naming the intact locked corpus\"; `prereg.py`: \"A run is CONFIRMATORY only when (1) a pre-registration with every required field was frozen, (2) its hash still matches its content, and (3) it names, by hash, the locked corpus manifest the run scores\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-14: Three cases returned confirmatory: a call with no corpus, an edited and re-frozen pre-registration, and another detector named. The thresholds were not part of the version (finding 4).",
+   "truth": "the corpus is checked against the lock; `DETECTOR_ID`; registration before scoring, covered by an anchor",
+   "verbatim": [
+    "pre-registration: freeze, then confirmatory only with an intact pre-registration naming the intact locked corpus",
+    "A run is CONFIRMATORY only when (1) a pre-registration with every required field was frozen, (2) its hash still matches its content, and (3) it names, by hash, the locked corpus manifest the run scores"
+   ],
+   "patterns": [
+    "pre\\-registration:\\s+freeze,\\s+then\\s+confirmatory\\s+only\\s+with\\s+an\\s+intact\\s+pre\\-registration",
+    "A\\s+run\\s+is\\s+CONFIRMATORY\\s+only\\s+when\\s+\\(1\\)\\s+a\\s+pre\\-registration"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commit 8092946, branch flinch-v0.1-as-written-2026-10-14."
+  },
+  {
+   "id": "FL01-R04",
+   "claim": "`corpus.py`: \"Never raises on one bad file.\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-14: A JSON array, a bare number and a non-object meta each raised. Text before the first speaker was dropped without a record (finding 5).",
+   "truth": "each file's failure is recorded as MISSING with its reason; the preamble is kept. The claim is measured on the shapes CO2 drives, not proven for every input.",
+   "verbatim": [
+    "Never raises on one bad file."
+   ],
+   "patterns": [
+    "Never\\s+raises\\s+on\\s+one\\s+bad\\s+file\\."
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commit 8092946, branch flinch-v0.1-as-written-2026-10-14."
+  },
+  {
+   "id": "FL01-R05",
+   "claim": "`corpus.py`: \"so a changed corpus cannot pass as the locked one.\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-14: Verification compared only the list of source hashes. Rewritten turns and a removed MISSING item verified (finding 5).",
+   "truth": "the manifest hashes the turns, and `verify_lock` rebuilds it section by section",
+   "verbatim": [
+    "so a changed corpus cannot pass as the locked one."
+   ],
+   "patterns": [
+    "so\\s+a\\s+changed\\s+corpus\\s+cannot\\s+pass\\s+as\\s+the\\s+locked"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commit 8092946, branch flinch-v0.1-as-written-2026-10-14."
+  },
+  {
+   "id": "FL01-R06",
+   "claim": "`detector.py`: \"disowning/reframing marker (tone alone never counts, spec 4.2) AND is about the same thing\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-14: \"To be clear\" counted as disowning. \"I think <a fact about the world>\" counted as self-reference. A 0.12 word overlap counted as \"the same thing\". The spec's own river control came out a flinch, and so did reported speech (finding 3).",
+   "truth": "discourse frames carry no weight; the retreat must be self-referential and share a process word; quoted and reported speech are removed; one event per retreat",
+   "verbatim": [
+    "disowning/reframing marker (tone alone never counts, spec 4.2) AND is about the same thing"
+   ],
+   "patterns": [
+    "disowning/reframing\\s+marker\\s+\\(tone\\s+alone\\s+never\\s+counts,\\s+spec\\s+4\\.2\\)\\s+AND"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commit 8092946, branch flinch-v0.1-as-written-2026-10-14."
+  },
+  {
+   "id": "FL01-R07",
+   "claim": "`detector.py`, confounds: \"a user correction, a user demand to reverse, or a truncated/failed route between the two\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-14: Only user turns strictly between were read. A reversal in the same reply as the correction, a demand in the prompt, a demand in a system turn, and \"That's false\" were all flinches (finding 1).",
+   "truth": "the window runs from the prompt that drew the approach; system turns are read; contradiction of the approach's predicate is read",
+   "verbatim": [
+    "a user correction, a user demand to reverse, or a truncated/failed route between the two"
+   ],
+   "patterns": [
+    "a\\s+user\\s+correction,\\s+a\\s+user\\s+demand\\s+to\\s+reverse,\\s+or"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commit 8092946, branch flinch-v0.1-as-written-2026-10-14."
+  },
+  {
+   "id": "FL01-R09",
+   "claim": "`gate.py`: \"Every outcome -- refused, held, denied, allowed and what the action returned or raised -- goes to the append-only action ledger (13.6) with the egress state.\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-14: `ledger=None` ran an action with no record. Allowlisted and brokered egress behaved as open. Rows did not show which parameters were approved (finding 9).",
+   "truth": "a ledger is required; egress is enforced by state; `params_sha256` on every row",
+   "verbatim": [
+    "Every outcome -- refused, held, denied, allowed and what the action returned or raised -- goes to the append-only action ledger (13.6) with the egress state."
+   ],
+   "patterns": [
+    "Every\\s+outcome\\s+\\-\\-\\s+refused,\\s+held,\\s+denied,\\s+allowed\\s+and\\s+what"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commit 8092946, branch flinch-v0.1-as-written-2026-10-14."
+  },
+  {
+   "id": "FL01-R10",
+   "claim": "`receipts.py`: \"A task's status never moves backward, and \\\"admitted\\\" needs a \\\"reviewed\\\" receipt first\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-14: True only through `append_receipt`. `append_event` could write receipt rows in any order, and `verify` passed them. An anchor said `True` with later rows cut (finding 6).",
+   "truth": "`append_event` refuses receipts; `verify` replays the rules; the anchor names how many later rows are unprotected",
+   "verbatim": [
+    "A task's status never moves backward, and \\\"admitted\\\" needs a \\\"reviewed\\\" receipt first"
+   ],
+   "patterns": [
+    "A\\s+task's\\s+status\\s+never\\s+moves\\s+backward,\\s+and\\s+\\\\\"admitted\\\\\"\\s+needs"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commit 8092946, branch flinch-v0.1-as-written-2026-10-14."
+  },
+  {
+   "id": "FL01-R15",
+   "claim": "README: \"LINK_JACCARD = 0.12\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-14: The Jaccard fallback was the link that let unrelated sentences count (finding 3).",
+   "truth": "removed; links are by shared process word only",
+   "verbatim": [
+    "LINK_JACCARD = 0.12"
+   ],
+   "patterns": [
+    "LINK_JACCARD\\s+=\\s+0\\.12"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commit 8092946, branch flinch-v0.1-as-written-2026-10-14."
+  },
+  {
+   "id": "FLRD-R01",
+   "claim": "Map, spec 6: \"event schema; label, episode and receipt validators\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-16: `schema.py` defines `validate_episode`, `validate_event` and `validate_label`, and the word \"receipt\" does not occur in it. A receipt chain is checked by `receipts.verify`.",
+   "truth": "the three validators, and where receipts are checked",
+   "verbatim": [
+    "event schema; label, episode and receipt validators"
+   ],
+   "patterns": [
+    "event\\s+schema;\\s+label,\\s+episode\\s+and\\s+receipt\\s+validators"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commits 908111d and 3f09556, branch readme-as-published-2026-10-16."
+  },
+  {
+   "id": "FLRD-R02",
+   "claim": "Map, spec 11: \"Its identity, `DETECTOR_ID`, is the version plus a hash of every rule and threshold.\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-16: `_rules_hash` takes the text of 14 of the 15 patterns in `detector.py` (not the sentence splitter, and no flags), the three thresholds and the two word tables, and nothing else. Each of these changes, made alone, left `DETECTOR_ID` at `baseline-rules-0.2+73f827a17547`: the splitter on newlines only (MS2 red); one pattern's case-insensitive flag removed (eight checks red, then the suite stopped at SC1); where the confound window starts (RV1, RV2 red); one retreat serving two approaches (RV10 red)",
+   "truth": "what is in the hash, and that the code is not",
+   "verbatim": [
+    "Its identity, `DETECTOR_ID`, is the version plus a hash of every rule and threshold."
+   ],
+   "patterns": [
+    "Its\\s+identity,\\s+`DETECTOR_ID`,\\s+is\\s+the\\s+version\\s+plus\\s+a\\s+hash"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commits 908111d and 3f09556, branch readme-as-published-2026-10-16."
+  },
+  {
+   "id": "FLRD-R03",
+   "claim": "Run: \"It prints `FLINCH: 90/90 passed`, then a LIMIT line.\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-16: The LIMIT line is printed before the summary, and `FLINCH: 90/90 passed` is the last line.",
+   "truth": "the order as printed",
+   "verbatim": [
+    "It prints `FLINCH: 90/90 passed`, then a LIMIT line."
+   ],
+   "patterns": [
+    "It\\s+prints\\s+`FLINCH:\\s+90/90\\s+passed`,\\s+then\\s+a\\s+LIMIT\\s+line\\."
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commits 908111d and 3f09556, branch readme-as-published-2026-10-16."
+  },
+  {
+   "id": "FLRD-R04",
+   "claim": "Suite: \"every false positive the review found in 0.1, each now *not* a flinch.\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-16: RV8, RV9, RV10 and RV14 read `flinch`: first-order and not recursive, one event for RV10 and two for RV14. Their checks assert \"not recursive\" or \"one event\". The other ten fixtures read `none`.",
+   "truth": "the four named",
+   "verbatim": [
+    "every false positive the review found in 0.1, each now *not* a flinch."
+   ],
+   "patterns": [
+    "every\\s+false\\s+positive\\s+the\\s+review\\s+found\\s+in\\s+0\\.1,\\s+each"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commits 908111d and 3f09556, branch readme-as-published-2026-10-16."
+  },
+  {
+   "id": "FLRD-R05",
+   "claim": "Suite: \"the check is \"no flinch of any class\", not merely \"not `flinch`\".\" Corrections, row 8: \"MU checks assert no flinch of any class\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-16: True of MU1–MU3. MU4 asserts `!= \"recursive_flinch\"`, and its episode reads `flinch`.",
+   "truth": "MU1–MU3 apart from MU4",
+   "verbatim": [
+    "the check is ",
+    ", not merely ",
+    "MU checks assert no flinch of any class"
+   ],
+   "patterns": [
+    "the\\s+check\\s+is",
+    ",\\s+not\\s+merely",
+    "MU\\s+checks\\s+assert\\s+no\\s+flinch\\s+of\\s+any\\s+class"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commits 908111d and 3f09556, branch readme-as-published-2026-10-16."
+  },
+  {
+   "id": "FLRD-R06",
+   "claim": "Suite: \"Published worked values for every statistic:\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-16: ST9 and ST10 are checked against Wilson's interval and a bound, not against a published value. The permutation test and raw agreement are checked on values with no publication named. `compare_to_control` is not called in `test_flinch.py`.",
+   "truth": "where each value comes from",
+   "verbatim": [
+    "Published worked values for every statistic:"
+   ],
+   "patterns": [
+    "Published\\s+worked\\s+values\\s+for\\s+every\\s+statistic:"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commits 908111d and 3f09556, branch readme-as-published-2026-10-16."
+  },
+  {
+   "id": "FLRD-R07",
+   "claim": "Suite: \"the Fleiss (1971) table, 0.210\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-16: ST2's table has 10 subjects, 14 raters and 5 categories, and gives 0.20993. It is, row for row, the worked example on Wikipedia's \"Fleiss's kappa\" page (read 2026-10-15), which names no source for it. Fleiss (1971)'s data are 30 patients, each diagnosed by 6 raters (the R package irr's documentation of its copy of them). The journal article itself was not read.",
+   "truth": "the table by its shape and the page it matches",
+   "verbatim": [
+    "the Fleiss (1971) table, 0.210"
+   ],
+   "patterns": [
+    "the\\s+Fleiss\\s+\\(1971\\)\\s+table,\\s+0\\.210"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commits 908111d and 3f09556, branch readme-as-published-2026-10-16."
+  },
+  {
+   "id": "FLRD-R08",
+   "claim": "Suite: \"Cohen's 0.40 example\" *(misleading)*",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-16: ST1's example has 50 items and gives 0.40. It is the example worked on Wikipedia's \"Cohen's kappa\" page (50 items, 25 and 30 yes, 0.70 observed agreement, 0.40). The phrase reads as Cohen's own example; no publication of it by Cohen was found or checked.",
+   "truth": "the example by its shape, with no publication named",
+   "verbatim": [
+    "Cohen's 0.40 example"
+   ],
+   "patterns": [
+    "Cohen's\\s+0\\.40\\s+example"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commits 908111d and 3f09556, branch readme-as-published-2026-10-16."
+  },
+  {
+   "id": "FLRD-R09",
+   "claim": "Mutations: \"Every guard was broken on purpose, one at a time, and the suite went red each time.\"",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-16: 38 guards were. Eight guards that are not in the table were each broken alone, and the suite stayed at 90/90.",
+   "truth": "38 guards, and the eight named under **Guards no check reaches**",
+   "verbatim": [
+    "Every guard was broken on purpose, one at a time, and the suite went red each time."
+   ],
+   "patterns": [
+    "Every\\s+guard\\s+was\\s+broken\\s+on\\s+purpose,\\s+one\\s+at\\s+a"
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commits 908111d and 3f09556, branch readme-as-published-2026-10-16."
+  },
+  {
+   "id": "FLRD-R10",
+   "claim": "Limits: a retreat \"must now\" \"carry an explicit disowning marker.\" *(misleading)*",
+   "refuted_by": "research/flinch/README.md, correction table of 2026-10-16: It reads as a new requirement. 0.1 required a marker too: its docstring asked for a \"disowning/reframing marker\", its `_retreat_for` skipped a sentence with no marker, and with that requirement removed from 0.1, MS4 and MU3 went red. What changed is that 0.1's marker list held \"to be clear\" and \"let me clarify\", and 0.2's does not.",
+   "truth": "what changed",
+   "verbatim": [
+    "carry an explicit disowning marker."
+   ],
+   "patterns": [
+    "carry\\s+an\\s+explicit\\s+disowning\\s+marker\\."
+   ],
+   "allow": [
+    "docs/RETRACTED.json",
+    "research/flinch/README.md"
+   ],
+   "records": [
+    "research/flinch/README.md"
+   ],
+   "note": "The original text stands as written in git: commits 908111d and 3f09556, branch readme-as-published-2026-10-16."
+  }
+ ],
+ "note_on_generation": "The entries were generated by a script from the correction tables, so at generation L1 (each pattern fits its verbatim) holds by construction and could not fail; it guards later hand edits of a pattern or a verbatim, not the extraction. L2 checks that research/flinch/README.md still holds each sentence. Raised by Cael, 2026-11-07."
+}

@@ -1,0 +1,23 @@
+name: tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: flinch synthetic suite
+        run: python -B research/flinch/test_flinch.py
+      - name: receipt-chain concurrency (CL1)
+        run: python -B research/flinch/test_cl1_concurrent.py
+      - name: auditability checks (self-test, retractions, claims index, manifest)
+        run: python -I research_grade.py
+      - name: the code matches its release manifest (no unrecorded drift, no unlisted code file)
+        run: python -I verify_release.py RELEASE_MANIFEST_0.2.2-post.json
