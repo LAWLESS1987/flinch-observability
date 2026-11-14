@@ -18,6 +18,12 @@ WHICH request was approved. A broker cannot be built without a ledger.
 Corrected 2026-10-14 (review finding 9): the first version ran actions with no ledger (ledger=None was
 allowed, contradicting "every outcome ... goes to the ledger"), treated allowlisted and brokered as open,
 and recorded no hash of the parameters.
+
+Corrected 2026-11-14 (K11): on an explicit allow, run(params) was called before any row for the action existed,
+so a ledger that failed afterwards left a side effect with no record. An "approved" row (same fields, outcome
+"approved") is now written BEFORE run(params); if that write fails the action is not run and act() returns
+"refused". The "done" or "failed" row follows as before, so an allowed action reads as two rows. An "approved"
+row with no "done" or "failed" after it means the action was approved and its end was never recorded.
 """
 from __future__ import annotations
 
@@ -103,7 +109,8 @@ class Broker:
         return "hold", "the judge's answer was not an explicit allow: %r" % (ans,)
 
     def act(self, task_id, name, params, run):
-        """Returns (outcome, why, result). `run(params)` is called only on an explicit allow."""
+        """Returns (outcome, why, result). `run(params)` is called only on an explicit allow, and only after
+        the "approved" row for it is on the ledger."""
         cap = self.registry.get(name)
         if cap is None:
             self._record(task_id, name, "refused", "undeclared capability: no manifest names %r" % name, params)
@@ -117,6 +124,15 @@ class Broker:
         if decision != "allow":
             self._record(task_id, name, decision, why, params)
             return decision, why, None
+        try:                                                          # K11: the record first, the side effect second
+            self._record(task_id, name, "approved", why, params)
+        except Exception as e:                                        # noqa: BLE001
+            reason = "allowed, but the approval could not be recorded (%s): the action was not run" % type(e).__name__
+            try:                                                      # the ledger just failed; say so if it now can
+                self._record(task_id, name, "refused", reason, params)
+            except Exception:                                         # noqa: BLE001
+                pass
+            return "refused", reason, None
         try:
             result = run(params)
         except Exception as e:                                        # noqa: BLE001

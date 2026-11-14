@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """verify_release.py -- the code on this branch must match the release manifest it claims to be.
 
-    python -I verify_release.py RELEASE_MANIFEST_0.2.2-post.json
+    python -I verify_release.py RELEASE_MANIFEST_0.2.2-post2.json
 
 Added 2026-11-07 after the CL1 change (214fe07) left receipts.py and a new test matching no release manifest for
 three days with nothing noticing; Cipher asked what would stop it happening again. Every file the manifest lists must
@@ -47,4 +47,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:] or ["RELEASE_MANIFEST_0.2.2-post.json"]))
+    sys.exit(main(sys.argv[1:] or ["RELEASE_MANIFEST_0.2.2-post2.json"]))
