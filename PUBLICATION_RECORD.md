@@ -54,3 +54,30 @@ of every tracked file. Passing them means the claims are auditable, not that the
   `test_cl1_concurrent.py` did not match any release manifest. `RELEASE_MANIFEST_0.2.2-post.json` records the code as
   it now stands, and names both changes. `RELEASE_MANIFEST_0.2.2.json` is kept unchanged.
 - **Tests.** FLINCH 141/141 and CL1 4/4. The CI job runs both suites and the checks on Python 3.10 and 3.12.
+
+## K11: a blank pre-registration and an unrecorded action, appended 2026-11-14
+
+At the owner's request, after a review on 2026-11-14 confirmed two defects by running them (finding K11), Claude
+corrected both. Same-author work, not independent validation.
+
+- **`prereg.freeze` froze an empty protocol.** `freeze(dict.fromkeys(REQUIRED, None))` was accepted: the
+  completeness test read `str(value)`, and `str(None)` is the four letters "None". The result was a frozen
+  pre-registration with a valid hash and no decision in it. `freeze` now refuses a required value that is null, an
+  empty or whitespace-only string, or a container holding only blanks; it also refuses a manifest hash that is not 64
+  lowercase hex characters and a detector name that is not a string. The error names the fields. A complete
+  pre-registration freezes to the same hash as before.
+- **`gate.Broker.act` ran an allowed action before any record of it existed.** If the ledger write after the action
+  failed, the side effect had happened unrecorded. `act` now writes an `approved` row first, with the same fields as
+  every other row. If that write fails, the action is not run and `act` returns `refused`. The `done` or `failed` row
+  follows as before. An allowed action is therefore two ledger rows where it was one: no field was renamed or removed,
+  and a reader that counts rows per action must expect the extra row.
+- **Tests.** `research/flinch/test_k11_prereg_gate.py`, 10 checks, run in CI. On the code before the change 9 were
+  red; the tenth holds that a complete pre-registration still freezes to the same hash. All 10 are green after. In
+  `test_flinch.py`, GA6 counted 11 ledger rows and now counts 13, because its fixture allows two actions. FLINCH stays
+  141/141 and CL1 4/4.
+- **Manifests.** `RELEASE_MANIFEST_0.2.2-post2.json` records the code as it now stands and CI checks against it.
+  `RELEASE_MANIFEST_0.2.2-post.json` is kept unchanged; `gate.py`, `prereg.py` and `test_flinch.py` no longer match it.
+  The version string stays 0.2.2. `detector.py` and `DETECTOR_ID` are unchanged.
+- **Limits.** `prereg.run_kind` does not repeat the completeness test, so a pre-registration frozen by the earlier
+  code, or hashed by hand, with a blank in a field `run_kind` does not read is still accepted there. If the ledger
+  cannot be written at all, the refusal cannot be written to it either; `act` still returns it to the caller.

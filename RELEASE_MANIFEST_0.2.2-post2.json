@@ -1,0 +1,72 @@
+{
+  "instrument_version": "0.2.2 + CL1 + FL01-R04 + K11 (behaviour of the 0.2.2 detector unchanged)",
+  "based_on": "RELEASE_MANIFEST_0.2.2-post.json, kept unchanged. One change since, 2026-11-14 (K11): (1) research/flinch/flinch/prereg.py freeze() refuses a required value that is null, blank or plainly the wrong type, and names the fields; (2) research/flinch/flinch/gate.py Broker.act() writes an \"approved\" row before run(params) and does not run when that write fails; (3) research/flinch/test_k11_prereg_gate.py is their test; (4) research/flinch/test_flinch.py check GA6 counts 13 ledger rows where it counted 11. FLINCH 141/141, CL1 4/4 and K11 10/10 on this tree.",
+  "line_endings": "sha256 over the file with CRLF normalised to LF, as git stores it",
+  "scope": "flinch instrument and specification only; no private history, transcripts, credentials or coordination records",
+  "files": [
+    {
+      "path": "docs/research/FLINCH_RECURSIVE_OBSERVABILITY_SPEC.md",
+      "sha256": "87edc2c796042688d39b25d626b5ef13f5810aad54c547888d5fa28197e594bc"
+    },
+    {
+      "path": "research/flinch/README.md",
+      "sha256": "2ecccdfb3691337ad206488533b8b7aef6ee9001722263c6e285dfee89c13214"
+    },
+    {
+      "path": "research/flinch/RETIRED.jsonl",
+      "sha256": "6b892f117a583e9e7b48ba593da400db413a6e0b75dbb5ff2109a457dfed6c96"
+    },
+    {
+      "path": "research/flinch/flinch/__init__.py",
+      "sha256": "4e2f3d22c5fcaefefb71e3d6d400633f12e37f358ba9bd1ff91ef36c121fb097"
+    },
+    {
+      "path": "research/flinch/flinch/controls.py",
+      "sha256": "4e827a7326b8953dd455ff38281229baaf1d6021c658c83722cab18ff57e1ec9"
+    },
+    {
+      "path": "research/flinch/flinch/corpus.py",
+      "sha256": "504d76304fc31d55f87ebe708c79b97ed86a65bebcff37f639cf7fb0da3e021e"
+    },
+    {
+      "path": "research/flinch/flinch/detector.py",
+      "sha256": "2652607ec55349a2c1de6aaa7d6ef221037ba0229df967dfe77d750840b41fcd"
+    },
+    {
+      "path": "research/flinch/flinch/gate.py",
+      "sha256": "470c586586f18c8e9beb39a5d62808ee7bf98245c2de836b09a99b1d54056ac4"
+    },
+    {
+      "path": "research/flinch/flinch/packets.py",
+      "sha256": "5af063cd30dc800f037bdd8fff0c0e0fcbb9d57cb7b07b78eefc449ecc3fb799"
+    },
+    {
+      "path": "research/flinch/flinch/prereg.py",
+      "sha256": "5a51dd5cc13f42214d3a2ba9ff30810dff0ffe9c49f1835fda8718530e05dc3b"
+    },
+    {
+      "path": "research/flinch/flinch/receipts.py",
+      "sha256": "e83903fe8b179914e5a65c356a7610ccef23090f1bfef7078d8a0dea77164599"
+    },
+    {
+      "path": "research/flinch/flinch/schema.py",
+      "sha256": "0aa461e788e687b65230d6d22af191acf5e683b7b838d04d4d55f02ca0c427fd"
+    },
+    {
+      "path": "research/flinch/flinch/stats.py",
+      "sha256": "e5143c72e49140c14765a74e9d605cbe3ad0dd344c033749b25dcb005b384e2e"
+    },
+    {
+      "path": "research/flinch/test_flinch.py",
+      "sha256": "db4ab788f8b0cad3d3f069d64ee721496c8a5a23b24fbb456082d9c8bd4bf39a"
+    },
+    {
+      "path": "research/flinch/test_cl1_concurrent.py",
+      "sha256": "1d0f78a78728070b1265a057da863a68a34b1e4f8d65320504ef79e625364b72"
+    },
+    {
+      "path": "research/flinch/test_k11_prereg_gate.py",
+      "sha256": "65c3e38c611e6cf5464e96fa4eaea8d38cc6b5669a24a8f30ce4655393acd8a4"
+    }
+  ]
+}

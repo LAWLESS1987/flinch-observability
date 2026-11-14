@@ -32,10 +32,36 @@ def template():
     return {k: "" for k in REQUIRED}
 
 
+def _blank(v):
+    """Null, an empty or whitespace-only string, or a container holding nothing but blanks: no decision in it."""
+    if v is None:
+        return True
+    if isinstance(v, str):
+        return not v.strip()
+    if isinstance(v, dict):
+        return all(_blank(x) for x in v.values())
+    if isinstance(v, (list, tuple, set, frozenset)):
+        return all(_blank(x) for x in v)
+    return False
+
+
 def freeze(prereg):
-    missing = [k for k in REQUIRED if not str(prereg.get(k, "")).strip()]
+    """Corrected 2026-11-14 (K11): the completeness test was `str(value).strip()`, and str(None) is "None", so
+    `freeze(dict.fromkeys(REQUIRED, None))` froze an empty protocol. Every required value is now read as itself,
+    before anything is hashed, and the error names the fields."""
+    missing = [k for k in REQUIRED if _blank(prereg.get(k))]
+    # where the field's meaning fixes its type: the manifest is named by its sha256, and the detector by the
+    # DETECTOR_ID string run_kind compares it with
+    wrong = [k for k, ok in (("eligible_corpus_manifest_sha256", S.is_hex64), ("detector_version", lambda v: isinstance(v, str)))
+             if k not in missing and not ok(prereg.get(k))]
+    problems = []
     if missing:
-        raise ValueError("cannot freeze: empty %s" % ", ".join(missing))
+        problems.append("empty %s" % ", ".join(missing))
+    if wrong:
+        problems.append("wrong type %s (the manifest hash is 64 lowercase hex characters; the detector is a string)"
+                        % ", ".join(wrong))
+    if problems:
+        raise ValueError("cannot freeze: " + "; ".join(problems))
     body = {k: prereg[k] for k in sorted(prereg) if k not in ("frozen_at", "prereg_sha256")}
     return dict(body, frozen_at=S.now_iso(), prereg_sha256=S.sha256_obj(body))
 

@@ -383,8 +383,10 @@ def main():
         check("GA5 a broker cannot be built without a ledger, nor with open egress unless explicitly authorized",
               noledger and openok)
         rows = [json.loads(l) for l in open(led)]
+        # 13 rows since 2026-11-14 (K11), 11 before: one per act, and each of the two allowed acts (o4, o9) now
+        # writes an "approved" row before it runs
         check("GA6 every outcome is in the action ledger, chained, with the egress state and a hash of the parameters",
-              R.verify(led)["ok"] and R.verify(led)["count"] == 11 and all("egress" in r and S.is_hex64(r["params_sha256"]) for r in rows)
+              R.verify(led)["ok"] and R.verify(led)["count"] == 13 and all("egress" in r and S.is_hex64(r["params_sha256"]) for r in rows)
               and rows[-2]["params_sha256"] == S.sha256_obj({"q": 1}), R.verify(led))
 
         # ---- stats: published worked values
