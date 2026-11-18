@@ -81,3 +81,32 @@ corrected both. Same-author work, not independent validation.
 - **Limits.** `prereg.run_kind` does not repeat the completeness test, so a pre-registration frozen by the earlier
   code, or hashed by hand, with a blank in a field `run_kind` does not read is still accepted there. If the ledger
   cannot be written at all, the refusal cannot be written to it either; `act` still returns it to the caller.
+
+## Intent provenance on the admission receipt, appended 2026-11-18
+
+At the owner's direction ("Add to flinch"), after the same mechanism landed in the covenant AI-memory store and
+the spiking plasticity ledger, Claude added it to the one record here that is an authored judgment steering what
+happens next: the `admitted` receipt. Same-author work, not independent validation.
+
+- **What changed.** `receipts.append_receipt` refuses an `admitted` receipt whose body lacks `intent`, `beneficiary`
+  or `divergence`, has a multi-line one, whose intent is a surface restatement of the admitted content, or whose
+  `divergence` is not `none` without a `diverges_from` naming a task with a receipt in the same ledger. The check
+  runs under the same lock as the status check (CL1), after the review rule, so an unreviewed task is still refused
+  for review first. `verify()` replays it on the record as read, so a forged admission without the fields is a
+  problem. `intent_check(path, task_id)` returns the four fields verbatim with one line on whether the intent is
+  still satisfiable on the ledger as it stands. Delivery receipts (`requested` .. `reviewed`) and the action ledger
+  are unchanged: machine outcomes with no author to ask.
+- **Tests.** `research/flinch/test_rp_intent_provenance.py`, 13 checks, run in CI, each refusal asserted by its own
+  reason. In a scratch run each guard was broken alone and the file restored byte-identical: with the screen
+  neutered 7 of 13 went red (RP02–04, 06, 07, 09, 12); with only `verify()`'s replay removed, 2 (RP09, RP12); with
+  only the write-time gate removed, 5 (RP02–04, 06, 07) -- so the write-time gate and the read-time replay are each
+  observed on their own. FLINCH stays 141/141 (RC9's forged admission now draws a second problem beside "admitted
+  before it was reviewed"; its check holds), CL1 4/4, K11 10/10.
+- **Manifests.** `RELEASE_MANIFEST_0.2.2-post3.json` records the code as it now stands and CI checks against it;
+  `RELEASE_MANIFEST_0.2.2-post2.json` is kept unchanged; `receipts.py` and `research/flinch/README.md` no longer
+  match it. The version string stays 0.2.2. `detector.py` and `DETECTOR_ID` are unchanged.
+- **Limits.** The screen sees emptiness and surface restatement, never truth. No admission existed before the rule
+  (measured: zero admitted rows in any ledger here), so there was nothing to tombstone, and no backfill is possible
+  on an append-only chain. The hypothesis the mechanism serves -- that legible, cross-linked divergence lowers
+  unacknowledged contradictions between admissions -- is pre-registered in
+  `research/flinch/PREREG_intent_provenance_2026-11-18.md` and NOT tested here.
