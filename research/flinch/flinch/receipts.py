@@ -36,6 +36,14 @@ screen cannot see: it checks emptiness and surface restatement, never truth; a w
 dishonest. No backfill: the chain is append-only by construction, so an earlier admission cannot be given
 fields later. Measured 2026-11-18: no ledger in this repository held an admitted row, so there was nothing to
 tombstone, and verify() reads any admitted row without the fields as a problem.
+
+TIGHTENED THE SAME DAY after a nine-seat consult (covenant: ops/CONSULT_INTENT_PROVENANCE_FLINCH_2026-11-18.md),
+every shown input reproduced by probe first: each field must be a string with at least one Unicode word and no
+line separator of any kind; divergence "none" tolerates case and trailing punctuation; the restatement span test
+matches on token boundaries, not inside words; diverges_from must name a DIFFERENT task with an EARLIER admitted
+receipt; a task is admitted ONCE (a later claim is a new task that diverges from the old one), replayed by
+verify_rows(); intent_check() reads one snapshot under the lock, lists contested_by, and says WELL-FORMED -- never
+"satisfiable", which it cannot judge.
 """
 from __future__ import annotations
 
@@ -50,9 +58,11 @@ from . import schema as S
 GENESIS = "0" * 64
 
 # --- intent provenance on admission (2026-11-18): the fields, the screen ---
+# Tightened the same day after the consult recorded in covenant's ops/CONSULT_INTENT_PROVENANCE_FLINCH_2026-11-18.md:
+# six seats, every shown input reproduced by probe against d343281 before anything here changed.
 PROVENANCE_FIELDS = ("intent", "beneficiary", "divergence")
 DIVERGENCE_NONE = "none"
-_PWORD = re.compile(r"[a-z0-9]+")
+_PWORD = re.compile(r"\w+")              # Unicode words: [a-z0-9] saw no words in a CJK intent, so the screen never fired
 
 
 def _norm_tokens(s):
@@ -63,46 +73,77 @@ def _intent_restates(intent, payload):
     """True iff `intent` reads as a restatement of `payload` rather than a statement of purpose. SURFACE ONLY, and
     that limit is the point: this is not a grammar or mood parser. It catches two shapes a human reviewer would
     also call a restatement -- the normalized intent appearing verbatim inside the payload, and the intent being
-    almost entirely the payload's own words -- and nothing subtler. (The rule as covenant's memory_store.py has it.)"""
+    almost entirely the payload's own words -- and nothing subtler. (The rule as covenant's memory_store.py has it,
+    with one repair from the consult: the span test matched INSIDE words, so "cause review" was refused against
+    "because reviewed" and "stop drift" against {"nonstop": "drifting"}; it now matches on token boundaries.)
+    Still refused: a short intent that is literally a span of the payload ("ship it" when the body says "we will
+    ship it friday"). Still passing: a restatement padded with unrelated words until the overlap drops under 0.8
+    (7 payload words + 3 others). Both are the price of a screen that reads words, not meaning."""
     it = _norm_tokens(intent)
     if not it:
         return False
     iset, pset = set(it), set(_norm_tokens(payload))
-    ni, npl = " ".join(it), " ".join(_norm_tokens(payload))
-    if ni and ni in npl:                                             # intent is literally a span of the payload
+    ni, npl = " " + " ".join(it) + " ", " " + " ".join(_norm_tokens(payload)) + " "
+    if ni in npl:                                                    # a span of the payload, on token boundaries
         return True
     if len(iset) < 3:                                                # too short to judge by overlap
         return False
     return len(iset & pset) / len(iset) >= 0.8                       # ~all of intent's words are the payload's
 
 
-def admission_provenance_reason(body, known_task_ids):
+def _one_line_words(v):
+    """Why a provenance value is malformed, or None. A str; one line, where EVERY line separator counts (U+2028 passed
+    a CR/LF test); no NUL; and at least one word under the Unicode tokenizer (a zero-width space, "..." and "???"
+    carried no intent and passed an emptiness test that only stripped whitespace)."""
+    if not isinstance(v, str):
+        return "must be a string, not %s" % type(v).__name__
+    if "\x00" in v or len(v.splitlines()) > 1:
+        return "must be a single line (no line separators or NULs)"
+    if not _norm_tokens(v):
+        return "must contain at least one word"
+    return None
+
+
+def _divergence_is_none(dv):
+    """'none', case-insensitive, with trailing punctuation or whitespace ignored ("None." demanded a cross-link)."""
+    return re.sub(r"[\s.!]+$", "", str(dv).strip().lower()) == DIVERGENCE_NONE
+
+
+def admission_provenance_reason(body, admitted_task_ids, task_id):
     """Why an admission body's provenance is malformed, or None when it is well-formed.
 
-    `known_task_ids` are the tasks with a receipt in this ledger, for the diverges_from cross-link. Pure: the
-    writer calls it under its lock and raises on any non-None answer; verify() calls it on the record as read."""
+    `admitted_task_ids` are the tasks with an EARLIER admitted receipt in this ledger -- the only records that carry
+    a claim a new admission can diverge from. (Before the consult any receipt counted, so an admission could diverge
+    from a task that was merely requested, or from itself.) `task_id` is the task being admitted. Pure: the writer
+    calls it under its lock and raises on any non-None answer; verify_rows() calls it on the record as read."""
     if not isinstance(body, dict):
         return "an admission body must be a dict carrying intent, beneficiary and divergence"
     for k in PROVENANCE_FIELDS:
         v = body.get(k)
-        if not str(v or "").strip():
+        if v is None or (isinstance(v, str) and not v.strip()):
             return "missing provenance field: %s is required and may not be empty" % k
-        if any(c in str(v) for c in "\r\n\x00"):
-            return "provenance field %r must be a single line (no newlines or NULs)" % k
+        why = _one_line_words(v)
+        if why:
+            return "provenance field %r %s" % (k, why)
     payload = S.canonical({k: v for k, v in body.items() if k not in PROVENANCE_FIELDS + ("diverges_from",)})
     if _intent_restates(body["intent"], payload):
         return ("intent restates the admitted content instead of stating its purpose; say what admitting this "
                 "is meant to CAUSE, not what it says")
-    dv, df = str(body["divergence"]).strip().lower(), str(body.get("diverges_from") or "").strip()
-    if dv == DIVERGENCE_NONE:
+    df = body.get("diverges_from")
+    if df is not None and not isinstance(df, str):
+        return "diverges_from must be a string task id, not %s" % type(df).__name__
+    df = (df or "").strip()
+    if _divergence_is_none(body["divergence"]):
         if df:
             return "divergence is 'none' but diverges_from names a task; one or the other"
     else:
         if not df:
             return ("divergence is not 'none' but no diverges_from task is given; name the task this admission "
                     "conflicts with so the chain is traversable")
-        if df not in known_task_ids:
-            return "diverges_from names a task with no receipt in this ledger: %r" % df
+        if df == task_id:
+            return "diverges_from names this same task; a divergence is from an earlier admission of ANOTHER task"
+        if df not in admitted_task_ids:
+            return "diverges_from names a task with no earlier admitted receipt in this ledger: %r" % df
     return None
 
 
@@ -202,8 +243,11 @@ def append_receipt(path, task_id, status, body):
         if status == "admitted" and not any(r["status"] == "reviewed" for r in mine):
             raise ValueError("task %s cannot be admitted before it is reviewed" % task_id)
         if status == "admitted":                                     # the authored judgment says why (2026-11-18)
-            known = {r.get("task_id") for r in rows if r.get("kind") == "receipt"}
-            why = admission_provenance_reason(body, known)
+            admitted = {r.get("task_id") for r in rows if r.get("kind") == "receipt" and r.get("status") == "admitted"}
+            if task_id in admitted:                                  # consult: a second admission silently shadowed the first
+                raise ValueError("task %s is already admitted; one admission per task -- a later claim is a new task "
+                                 "that diverges from it" % task_id)
+            why = admission_provenance_reason(body, admitted, task_id)
             if why:
                 raise ValueError("task %s cannot be admitted without intent provenance: %s" % (task_id, why))
         return _chain_unlocked(path, {"kind": "receipt", "task_id": task_id, "status": status, "body": body})
@@ -214,8 +258,16 @@ def verify(path, anchor=None):
 
     An anchor protects rows 0..n only: rows after it can be cut or rewritten undetected until a newer anchor is
     taken. "anchored" says exactly that, every time (review finding 6)."""
-    rows, problems, prev = _rows(path), [], GENESIS
-    status, tasks = {}, set()
+    return verify_rows(_rows(path), anchor)
+
+
+def verify_rows(rows, anchor=None):
+    """verify() over rows already read: ONE snapshot, so a reader that also returns the rows (intent_check) judges
+    the same bytes it hands back. The consult found intent_check reading the file once for the fields and again,
+    inside verify(), for the verdict; a write landing between the two reads gave fields from one state and a verdict
+    from another."""
+    problems, prev = [], GENESIS
+    status, admitted = {}, set()
     for i, r in enumerate(rows):
         want = S.sha256_obj({k: v for k, v in r.items() if k != "hash"})
         if r.get("hash") != want:
@@ -234,11 +286,14 @@ def verify(path, anchor=None):
                 problems.append("row %d: task %s admitted before it was reviewed" % (i, r.get("task_id")))
             if st in S.STATUSES:
                 seen.append(st)
-            tasks.add(r.get("task_id"))
             if st == "admitted":                                     # intent provenance, replayed the same way
-                why = admission_provenance_reason(r.get("body"), tasks)
+                tid = r.get("task_id")
+                if tid in admitted:
+                    problems.append("row %d: task %s admitted a second time; one admission per task" % (i, tid))
+                why = admission_provenance_reason(r.get("body"), admitted, tid)
                 if why:
-                    problems.append("row %d: task %s admitted without intent provenance: %s" % (i, r.get("task_id"), why))
+                    problems.append("row %d: task %s admitted without intent provenance: %s" % (i, tid, why))
+                admitted.add(tid)
         prev = r.get("hash")
     if anchor is None:
         anchored = "unanchored: a full rewrite from the altered row on would verify"
@@ -261,32 +316,44 @@ def anchor(path):
 
 def intent_check(path, task_id):
     """Reader side, for any agent: the admission's intent, beneficiary, divergence and diverges_from VERBATIM -- no
-    rewriting, no summary -- plus `satisfiable` and one line saying why, judged on the ledger as it stands now.
-    UNSATISFIABLE when there is no admission for the task, when the chain does not verify, when the fields are
-    missing or malformed (an admission that predates or evaded the rule), or when diverges_from names a task with
-    no receipt here. Read-only: it never writes to the ledger."""
-    rows = _rows(path)
+    rewriting, no summary -- plus a flag and one line saying exactly what was checked, on ONE snapshot of the ledger
+    (read under the writers' lock, so never a half-written line). Read-only: it never writes to the ledger.
+
+    The flag is `satisfiable`, the name the write-schema spec and the covenant/spiking readers use, and the consult
+    of 2026-11-18 was unanimous that the WORD claims more than the check does: it means well-formed fields, links
+    that resolve, a chain that verifies (unanchored) -- never that the stated purpose can be met ("Make yesterday
+    happen again" reads True). So the assessment line says WELL-FORMED, not satisfiable, and names the limit; the key
+    stays until the three repositories rename it together. `contested_by` lists the tasks whose own admission
+    diverges from this one, so a superseded claim is visible here instead of only from the other end of the link."""
+    with _lock(path):
+        rows = _rows(path)
     out = {"task_id": task_id, "intent": None, "beneficiary": None, "divergence": None, "diverges_from": None,
-           "satisfiable": False, "assessment": ""}
+           "contested_by": [], "satisfiable": False, "assessment": ""}
     adm = [r for r in rows if r.get("kind") == "receipt" and r.get("task_id") == task_id and r.get("status") == "admitted"]
     if not adm:
-        out["assessment"] = "UNSATISFIABLE: no admission receipt for task %r in this ledger" % task_id
+        out["assessment"] = "NOT WELL-FORMED: no admission receipt for task %r in this ledger" % task_id
         return out
-    row = adm[-1]
+    row = adm[0]                                                     # one admission per task; a second is a verify problem
     body = row.get("body") if isinstance(row.get("body"), dict) else {}
     for k in PROVENANCE_FIELDS + ("diverges_from",):
         out[k] = body.get(k)
-    v = verify(path)
+    out["contested_by"] = [r.get("task_id") for r in rows if r.get("kind") == "receipt" and r.get("status") == "admitted"
+                           and isinstance(r.get("body"), dict) and r["body"].get("diverges_from") == task_id]
+    v = verify_rows(rows)
     if not v["ok"]:
-        out["assessment"] = "UNSATISFIABLE: the chain does not verify (%s)" % v["problems"][0]
+        out["assessment"] = "NOT WELL-FORMED: the chain does not verify (%s)" % v["problems"][0]
         return out
-    known = {r.get("task_id") for r in rows if r.get("kind") == "receipt"}
-    why = admission_provenance_reason(body, known)
+    before = {r.get("task_id") for r in rows[:row.get("seq", 0)] if r.get("kind") == "receipt" and r.get("status") == "admitted"}
+    why = admission_provenance_reason(body, before, task_id)
     if why:
-        out["assessment"] = "UNSATISFIABLE: %s" % why
+        out["assessment"] = "NOT WELL-FORMED: %s" % why
         return out
     out["satisfiable"] = True
-    none = str(out["divergence"]).strip().lower() == DIVERGENCE_NONE
-    out["assessment"] = "SATISFIABLE: admitted at %s (row %s); the chain verifies (unanchored: see verify()); divergence %s%s" % (
-        row.get("at"), row.get("seq"), out["divergence"], "" if none else " from task %r" % out["diverges_from"])
+    none = _divergence_is_none(out["divergence"])
+    out["assessment"] = ("WELL-FORMED: admitted at %s (row %s); fields present, one line each, with words; links resolve; "
+                         "the chain verifies (unanchored: see verify()); divergence %s%s; %s. This does not judge whether "
+                         "the stated purpose can be met." % (
+                             row.get("at"), row.get("seq"), out["divergence"],
+                             "" if none else " from task %r" % out["diverges_from"],
+                             ("contested by %s" % out["contested_by"]) if out["contested_by"] else "uncontested"))
     return out

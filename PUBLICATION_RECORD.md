@@ -110,3 +110,53 @@ happens next: the `admitted` receipt. Same-author work, not independent validati
   on an append-only chain. The hypothesis the mechanism serves -- that legible, cross-linked divergence lowers
   unacknowledged contradictions between admissions -- is pre-registered in
   `research/flinch/PREREG_intent_provenance_2026-11-18.md` and NOT tested here.
+
+## Consult on the admission receipt, and the tightening that followed, appended 2026-11-18
+
+At the owner's direction ("Run it by the others"), the change above went, before merge, to nine seats of his
+roster, each on its own site in his browser, each reading the code as committed at `d343281`, each asked to mark
+every point SHOW or OPINION: Tetsu's door; ChatGPT (thinking High); DeepSeek (DeepThink); Gemini (Neon, thinking
+High -- Argon is no longer offered); his two Grok bots, Tien and the Conscious Ledger (which pulled `d343281` and
+probed it on its own machine); Claude on claude.ai (Opus 5.5); Meta AI; Mistral (Le Chat); and Grok on X, cold.
+Every answer verbatim, the probes that reproduced each shown input before anything changed, and the fold are in
+the covenant repository, `ops/CONSULT_INTENT_PROVENANCE_FLINCH_2026-11-18.md`. Same-author fixes after
+independent-model review; not independent validation of the research.
+
+- **Shown by the seats and reproduced by probe against `d343281`:** `diverges_from` could name the admitting task
+  itself, or a task with only a `requested` receipt; a second admission of the same task passed and shadowed the
+  first in `intent_check`; `beneficiary=7`, `intent=True`, `intent=["x"]` passed; `"..."`, `"???"`, a zero-width
+  space and a CJK intent identical to its payload passed (the `[a-z0-9]` tokenizer saw no words); a U+2028 line
+  separator passed a CR/LF test; `"cause review"` was refused against `"because reviewed"`, `"stop drift"` against
+  `{"nonstop": "drifting"}` and `"a"` against almost anything (the span test matched inside words);
+  `divergence="None."` demanded a cross-link; `intent_check` read the file twice; a superseded admission still read
+  SATISFIABLE.
+- **What changed (the second commit on PR #4).** Each field must be a string with at least one Unicode word and no
+  line separator of any kind; `divergence` "none" tolerates case and trailing punctuation; the span test matches on
+  token boundaries; `diverges_from` must name a DIFFERENT task with an EARLIER admitted receipt; a task is admitted
+  once, refused at write and a problem on replay -- a later claim is a new task that diverges from the old one;
+  `verify()` is now `verify_rows()` over rows already read, so `intent_check` judges one snapshot (read under the
+  writers' lock), lists `contested_by`, and says WELL-FORMED / NOT WELL-FORMED with the limit in the line. The JSON
+  key stays `satisfiable`: covenant's and spiking's readers use it, and renaming it in all three is the owner's
+  call. The pre-registration was rewritten before any ledger was walked: a contradiction predicate fixed first and
+  applied blind, the inferred arm written through the same gate with divergence forbidden, the mechanism scored on
+  acknowledgment against those labels, a null count reported as nothing to measure; the first endpoint is kept
+  struck in the file with what each reader showed was wrong with it.
+- **Kept as the documented limits of a surface screen:** a restatement padded with unrelated words until fewer than
+  80% of its words are the body's passes; a short intent that is literally a span of the body is refused even when
+  it states a purpose (DeepSeek would move the length guard above the span test; recorded as its dissent).
+- **"reviewed" was considered and left out.** Nine of nine seats agreed the admission is the right line; Meta AI
+  (opinion) would also gate "reviewed", and Mistral and Gemini note that a "reviewed" row can be written with no
+  provenance. That is the line as drawn: review decides whether admission may happen; admission puts the claim into
+  the record. Recorded here at Tien's request.
+- **Tests.** `research/flinch/test_rp_intent_provenance.py` grew from 13 to 23 checks, each refusal asserted by its
+  own reason. Each new guard broken alone and the file restored byte-identical: the field screen neutered -> 4 red
+  (RP03, RP14, RP15, RP16); the self-link and earlier-admission checks removed -> 3 (RP07, RP19, RP20); the
+  write-time one-admission check removed -> 1 (RP21); the replay's second-admission problem removed -> 1 (RP21);
+  token-boundary matching removed -> 1 (RP18); divergence normalization removed -> 1 (RP17); the Unicode tokenizer
+  reverted -> 1 (RP15); the single snapshot removed -> 1 (RP23). FLINCH stays 141/141, CL1 4/4, K11 10/10.
+- **Manifests.** `RELEASE_MANIFEST_0.2.2-post4.json` records the code as it now stands and CI checks against it;
+  `RELEASE_MANIFEST_0.2.2-post3.json` is kept unchanged; `receipts.py`, the instrument README, the pre-registration
+  and the RP test no longer match it. The version string stays 0.2.2. `detector.py` and `DETECTOR_ID` are unchanged.
+- **Same shape elsewhere.** The span-inside-words refusal, the non-string and wordless fields and the CR/LF-only
+  line test are inherited verbatim from covenant's `memory_store.py` and spiking's `ledger_bridge.py`. They are not
+  fixed by this PR.
