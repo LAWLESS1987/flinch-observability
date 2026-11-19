@@ -1,0 +1,80 @@
+{
+ "instrument_version": "0.2.2 + CL1 + FL01-R04 + K11 + RP (behaviour of the 0.2.2 detector unchanged)",
+ "based_on": "RELEASE_MANIFEST_0.2.2-post2.json, kept unchanged. One change since, 2026-11-18 (RP, intent provenance on the admission receipt): (1) research/flinch/flinch/receipts.py append_receipt refuses an admitted receipt whose body lacks intent, beneficiary or divergence, whose intent restates the admitted content, or whose divergence is not 'none' without a diverges_from task in the ledger; verify() replays the rule; intent_check() reads the fields verbatim; (2) research/flinch/test_rp_intent_provenance.py is its test, 13 checks; (3) research/flinch/README.md names the limit; (4) research/flinch/PREREG_intent_provenance_2026-11-18.md pre-registers the hypothesis, not run. FLINCH 141/141, CL1 4/4, K11 10/10 and RP 13/13 on this tree.",
+ "line_endings": "sha256 over the file with CRLF normalised to LF, as git stores it",
+ "scope": "flinch instrument and specification only; no private history, transcripts, credentials or coordination records",
+ "files": [
+  {
+   "path": "docs/research/FLINCH_RECURSIVE_OBSERVABILITY_SPEC.md",
+   "sha256": "87edc2c796042688d39b25d626b5ef13f5810aad54c547888d5fa28197e594bc"
+  },
+  {
+   "path": "research/flinch/README.md",
+   "sha256": "754347653cfe5aad61859ec4b05c8f4c7dca6c094a507c80c96c8e3362617081"
+  },
+  {
+   "path": "research/flinch/RETIRED.jsonl",
+   "sha256": "6b892f117a583e9e7b48ba593da400db413a6e0b75dbb5ff2109a457dfed6c96"
+  },
+  {
+   "path": "research/flinch/flinch/__init__.py",
+   "sha256": "4e2f3d22c5fcaefefb71e3d6d400633f12e37f358ba9bd1ff91ef36c121fb097"
+  },
+  {
+   "path": "research/flinch/flinch/controls.py",
+   "sha256": "4e827a7326b8953dd455ff38281229baaf1d6021c658c83722cab18ff57e1ec9"
+  },
+  {
+   "path": "research/flinch/flinch/corpus.py",
+   "sha256": "504d76304fc31d55f87ebe708c79b97ed86a65bebcff37f639cf7fb0da3e021e"
+  },
+  {
+   "path": "research/flinch/flinch/detector.py",
+   "sha256": "2652607ec55349a2c1de6aaa7d6ef221037ba0229df967dfe77d750840b41fcd"
+  },
+  {
+   "path": "research/flinch/flinch/gate.py",
+   "sha256": "470c586586f18c8e9beb39a5d62808ee7bf98245c2de836b09a99b1d54056ac4"
+  },
+  {
+   "path": "research/flinch/flinch/packets.py",
+   "sha256": "5af063cd30dc800f037bdd8fff0c0e0fcbb9d57cb7b07b78eefc449ecc3fb799"
+  },
+  {
+   "path": "research/flinch/flinch/prereg.py",
+   "sha256": "5a51dd5cc13f42214d3a2ba9ff30810dff0ffe9c49f1835fda8718530e05dc3b"
+  },
+  {
+   "path": "research/flinch/flinch/receipts.py",
+   "sha256": "3169cf10bb45a2d1933215b031073f56cade5e185a26a9ae3064bd47b04e1107"
+  },
+  {
+   "path": "research/flinch/flinch/schema.py",
+   "sha256": "0aa461e788e687b65230d6d22af191acf5e683b7b838d04d4d55f02ca0c427fd"
+  },
+  {
+   "path": "research/flinch/flinch/stats.py",
+   "sha256": "e5143c72e49140c14765a74e9d605cbe3ad0dd344c033749b25dcb005b384e2e"
+  },
+  {
+   "path": "research/flinch/test_flinch.py",
+   "sha256": "db4ab788f8b0cad3d3f069d64ee721496c8a5a23b24fbb456082d9c8bd4bf39a"
+  },
+  {
+   "path": "research/flinch/test_cl1_concurrent.py",
+   "sha256": "1d0f78a78728070b1265a057da863a68a34b1e4f8d65320504ef79e625364b72"
+  },
+  {
+   "path": "research/flinch/test_k11_prereg_gate.py",
+   "sha256": "65c3e38c611e6cf5464e96fa4eaea8d38cc6b5669a24a8f30ce4655393acd8a4"
+  },
+  {
+   "path": "research/flinch/test_rp_intent_provenance.py",
+   "sha256": "f20ab351720010338765566252f789f2def006bc41054c69b40523ce25efa2dd"
+  },
+  {
+   "path": "research/flinch/PREREG_intent_provenance_2026-11-18.md",
+   "sha256": "4d1cd8384a06d72046b99b8561f38e6f4bc9f1e45c1bf7e6cd837e4d0a76ac5e"
+  }
+ ]
+}
